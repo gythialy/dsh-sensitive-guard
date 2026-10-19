@@ -1,4 +1,5 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
@@ -17,7 +18,7 @@ let auditPath: string
 let keyPath: string
 
 beforeEach(async () => {
-  dir = await mkdtemp(path.join(process.cwd(), '.tmp', 'hooks-'))
+  dir = await mkdtemp(path.join(os.tmpdir(), 'sg-hooks-'))
   auditPath = path.join(dir, 'audit.jsonl')
   keyPath = path.join(dir, 'pii.key')
 })

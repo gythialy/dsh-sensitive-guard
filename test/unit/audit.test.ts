@@ -1,4 +1,5 @@
 import { mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { AuditLog } from '../../src/audit.js'
@@ -7,7 +8,7 @@ import type { Logger } from '../../src/contracts.js'
 const tempDirs: string[] = []
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(path.join(process.cwd(), '.tmp', 'audit-'))
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'sg-audit-'))
   tempDirs.push(dir)
   return dir
 }
