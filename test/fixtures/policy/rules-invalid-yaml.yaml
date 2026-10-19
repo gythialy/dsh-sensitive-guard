@@ -1,0 +1,4 @@
+# Synthetic fixture: deliberately malformed YAML.
+rules:
+  - action: deny
+    match: [unclosed

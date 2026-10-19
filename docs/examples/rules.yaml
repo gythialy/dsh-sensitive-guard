@@ -1,0 +1,45 @@
+# Example project rules: <project>/.dsh/rules.yaml
+rules:
+  - id: allow-env-example
+    action: allow
+    priority: 200
+    match:
+      paths: ['**/.env.example', '**/.env.sample', '**/.env.template']
+
+  - id: deny-credential-paths
+    action: deny
+    priority: 190
+    match:
+      paths:
+        - '**/.env'
+        - '**/.env.*'
+        - '**/.ssh/**'
+        - '**/.aws/**'
+        - '**/.gnupg/**'
+        - '**/.kube/**'
+        - '**/.npmrc'
+        - '**/.netrc'
+        - '**/*.pem'
+        - '**/*.key'
+        - '**/id_rsa*'
+        - '**/id_ed25519*'
+        - '**/.dsh/.credentials.yaml'
+    reason: 'Credential-bearing path; use an example file or ask the user.'
+
+  - id: deny-env-dump
+    action: deny
+    priority: 180
+    match:
+      tools: [bash, pwsh]
+      argv:
+        command: [printenv, env]
+    reason: 'Environment dumps are blocked; read only the variable you need.'
+
+  - id: ask-curl-to-new-host
+    action: ask
+    priority: 100
+    match:
+      tools: [bash]
+      argv:
+        command: curl
+    reason: 'Outbound curl may transmit credentials; confirm the target.'

@@ -1,0 +1,17 @@
+# Synthetic fixture for policy-loader tests; contains no real credentials.
+rules:
+  - id: inspect-fixture-allow
+    action: allow
+    priority: 5
+    match:
+      tools: [read]
+      paths: ['**/.env.example']
+    reason: 'reading an example file is allowed'
+
+  - id: inspect-fixture-deny
+    action: deny
+    priority: 1
+    match:
+      tools: [read]
+      paths: ['**/.env']
+    reason: 'reading credential files is blocked'

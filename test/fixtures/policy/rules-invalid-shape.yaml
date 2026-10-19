@@ -1,0 +1,6 @@
+# Synthetic fixture: syntactically valid YAML, invalid rule shape.
+rules:
+  - id: bad-action
+    action: block
+    match:
+      paths: ['**/.env']

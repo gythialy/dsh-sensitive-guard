@@ -1,0 +1,20 @@
+# Example profile override: ~/.dsh/profiles/web/cordis.patch.yml
+- id: sensitive-guard
+  name: dsh-sensitive-guard
+  config:
+    mode: monitor
+    defaultDecision: allow
+    redact:
+      userMessages: true
+      toolResults: true
+      systemPrompt: true
+      ptcLog: true
+    levels:
+      input: aggressive
+      output: balanced
+    policy:
+      rulesFile: .dsh/rules.yaml
+      builtin: true
+    audit:
+      enabled: true
+      path: ~/.dsh/audit/sensitive-guard.jsonl

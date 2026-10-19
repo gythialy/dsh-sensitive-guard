@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Sensitive Guard",
+    "description": "Blocks credential reads and outbound secrets, and redacts secrets, tokens, and PII before they reach the model, session log, or spill files."
+  }
+}

@@ -1,0 +1,15 @@
+# Bundle patch for dsh-sensitive-guard. It is mounted as one insert over the
+# empty profile root; a profile's own patch layer can override this row by id.
+- insert:
+    - id: sensitive-guard
+      name: dsh-sensitive-guard
+      config:
+        mode: monitor
+        redact:
+          userMessages: true
+          toolResults: true
+          systemPrompt: true
+          ptcLog: true
+        levels:
+          input: aggressive
+          output: balanced

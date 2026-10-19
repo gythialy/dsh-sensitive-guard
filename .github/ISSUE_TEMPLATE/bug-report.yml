@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a false positive, missed detection, crash, or compatibility problem.
+title: 'bug: '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do **not** paste live credentials, tokens, private keys, full home paths, or customer data.
+        Use synthetic values (for example `sk-example-...`) and redact paths.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the tool name and sanitized input/output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH version
+      placeholder: 0.2.1-rc.2
+    validations:
+      required: true
+  - type: input
+    id: guard-version
+    attributes:
+      label: dsh-sensitive-guard version
+      placeholder: 0.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options: [monitor, enforce]
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration (sanitized)
+      render: yaml

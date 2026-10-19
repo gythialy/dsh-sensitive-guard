@@ -1,0 +1,31 @@
+# Dependencies and build output
+node_modules/
+lib/
+coverage/
+*.tsbuildinfo
+.pnpm-store/
+.pnpm-cache/
+.cache/
+.data/
+.state/
+.npm/
+.tmp/
+
+# Local environment and secrets (never commit real credentials)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!test/fixtures/*.key
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Temporary sandbox artifacts
+tmp/
+.tmp/

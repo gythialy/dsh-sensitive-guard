@@ -1,0 +1,8 @@
+# Vendored assets and legal texts must stay byte-stable.
+LICENSE
+NOTICE
+THIRD_PARTY_NOTICES.md
+src/policy/baseline.yaml
+docs/sensitive-guard-integration.md
+test/fixtures/**
+pnpm-lock.yaml
