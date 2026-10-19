@@ -30,6 +30,12 @@ All notable changes to this project are documented here. The format follows
   and linear scanning cost are unchanged, and CodeQL's
   `js/regex/missing-regexp-anchor` operator-precedence alert is resolved.
 
+### Changed
+
+- README roadmap is now managed entirely in GitHub Issues; the status table was
+  removed. The install section documents the planned npm release
+  ([#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6)).
+
 ### Known limitations
 
 - `redact.notify`, `/guard` commands, `pii.restore`, and `bin/scan.mjs` are not

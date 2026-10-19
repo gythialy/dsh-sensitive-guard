@@ -46,6 +46,8 @@ threat-model impact in the PR template.
 
 ## Release
 
+- The first npm release is tracked in
+  [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6); follow its checklist.
 - Tags matching `v*` run `.github/workflows/release.yml`: verify, build, publish to npm
   with provenance, and create a GitHub release. The workflow needs an `NPM_TOKEN`
   repository secret with publish rights.

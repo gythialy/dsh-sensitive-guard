@@ -8,7 +8,7 @@
 
 面向 [DeepSeek Harness](https://github.com/deepseek-ai/dsh) 的 host-only 安全插件：**拦截凭据读取与外发密钥**，并在密钥、令牌与 PII 进入模型、会话日志或 spill 文件前替换为占位符。
 
-> 状态：**0.0.0 预发布**。拦截与脱敏垂直切片已实现并有测试；状态表中标记为 _planned_ 的能力尚未实现，请勿当作可用功能。
+> 状态：**0.0.0 预发布**。拦截与脱敏垂直切片已实现并有测试；计划中的工作统一由 GitHub Issues 跟踪（见[路线图](#路线图)），尚未实现的能力请勿当作可用功能。
 
 ## 覆盖范围
 
@@ -37,24 +37,11 @@
 - **审计**：JSONL，只含规则 id、计数与 hash，不含原文、密钥或完整路径。
 - **先观察**：`mode: monitor` 只审计不拦截。
 
-## 状态
+## 路线图
 
-| 能力                                                       | 状态                                                                     |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------ |
-| 配置 schema 与校验                                         | ✅                                                                       |
-| 路径/argv/参数/网络规则引擎                                | ✅                                                                       |
-| 内置高危基线                                               | ✅ vendor                                                                |
-| 密钥/PII 脱敏、`value` + content、幂等                     | ✅                                                                       |
-| 五个生命周期钩子                                           | ✅                                                                       |
-| hash-only 审计与轮转                                       | ✅                                                                       |
-| 单元 + 集成测试、CI（格式/lint/typecheck/test/build/pack） | ✅                                                                       |
-| `/guard status\|on\|off\|restore` 命令                     | planned · [#1](https://github.com/gythialy/dsh-sensitive-guard/issues/1) |
-| 仅计数的提示消息（`redact.notify`）                        | planned · [#2](https://github.com/gythialy/dsh-sensitive-guard/issues/2) |
-| `bin/scan.mjs` 仓库/CI 扫描器                              | planned · [#3](https://github.com/gythialy/dsh-sensitive-guard/issues/3) |
-| 端到端 profile + mock provider 测试                        | planned · [#4](https://github.com/gythialy/dsh-sensitive-guard/issues/4) |
-| 进程级 HTTP 代理                                           | v1 不做 · [#5](https://github.com/gythialy/dsh-sensitive-guard/issues/5) |
-
-计划中的能力统一用 GitHub issue 跟踪，上表链接即对应 issue。
+所有计划中的工作都通过 GitHub Issues 管理。入口是
+[roadmap 标签](https://github.com/gythialy/dsh-sensitive-guard/issues?q=is%3Aissue+is%3Aopen+label%3Aroadmap)，
+issue 列表是唯一来源。
 
 ## 要求
 
@@ -62,7 +49,17 @@
 - DeepSeek Harness `0.2.1-rc.2`（peer 范围 `>=0.2.1-rc.2 <0.3.0-0`）
 - 启用了 `tools` 服务的 profile（base bundle）
 
-## 安装（开发期）
+## 安装
+
+### 从 npm 安装（计划中）
+
+首个公开版本由 [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6) 跟踪。发布后：
+
+```bash
+dsh plugin --profile web add dsh-sensitive-guard
+```
+
+### 从源码安装（开发期）
 
 ```bash
 pnpm install

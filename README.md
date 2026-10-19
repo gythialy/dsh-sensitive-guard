@@ -8,7 +8,7 @@
 
 A host-only security plugin for [DeepSeek Harness](https://github.com/deepseek-ai/dsh): it **blocks credential reads and outbound secrets**, and **redacts secrets, tokens, and PII** before they reach the model, the session log, or a spill file.
 
-> Status: **0.0.0, pre-release**. The interception and redaction vertical slice is implemented and tested. Items marked _planned_ in the status table are not implemented yet; do not describe them as available.
+> Status: **0.0.0, pre-release**. The interception and redaction vertical slice is implemented and tested. Planned work is tracked in GitHub Issues (see [Roadmap](#roadmap)); do not describe planned capabilities as available.
 
 ## What it covers
 
@@ -37,24 +37,11 @@ The guard only constrains content that traverses DSH's tool and message pipeline
 - **Audit**: JSONL with rule ids, counts, and hashes only — never plaintext, secrets, or full paths.
 - **Observe first**: `mode: monitor` audits without blocking.
 
-## Status
+## Roadmap
 
-| Capability                                                           | State                                                                                |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Config schema and validation                                         | ✅                                                                                   |
-| Path/argv/parameter/network policy engine                            | ✅                                                                                   |
-| Built-in high-risk baseline                                          | ✅ vendored                                                                          |
-| Secret/PII redaction, `value` + content, idempotence                 | ✅                                                                                   |
-| Five lifecycle hooks                                                 | ✅                                                                                   |
-| Hash-only audit log with rotation                                    | ✅                                                                                   |
-| Unit + integration tests, CI (format/lint/typecheck/test/build/pack) | ✅                                                                                   |
-| `/guard status\|on\|off\|restore` commands                           | planned · [#1](https://github.com/gythialy/dsh-sensitive-guard/issues/1)             |
-| Count-only visibility notice (`redact.notify`)                       | planned · [#2](https://github.com/gythialy/dsh-sensitive-guard/issues/2)             |
-| `bin/scan.mjs` repository/CI scanner                                 | planned · [#3](https://github.com/gythialy/dsh-sensitive-guard/issues/3)             |
-| End-to-end profile + mock-provider test                              | planned · [#4](https://github.com/gythialy/dsh-sensitive-guard/issues/4)             |
-| Process-level HTTP proxy                                             | out of scope for v1 · [#5](https://github.com/gythialy/dsh-sensitive-guard/issues/5) |
-
-Planned capabilities are tracked as GitHub issues; each link above goes to its tracking issue.
+All planned work is tracked in GitHub Issues. Start with the
+[roadmap label](https://github.com/gythialy/dsh-sensitive-guard/issues?q=is%3Aissue+is%3Aopen+label%3Aroadmap);
+the issue list is the single source of truth.
 
 ## Requirements
 
@@ -62,7 +49,17 @@ Planned capabilities are tracked as GitHub issues; each link above goes to its t
 - DeepSeek Harness `0.2.1-rc.2` (peer range `>=0.2.1-rc.2 <0.3.0-0`)
 - A profile with the `tools` service (base bundle)
 
-## Install (development)
+## Install
+
+### From npm (planned)
+
+The first public release is tracked in [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6). Once published:
+
+```bash
+dsh plugin --profile web add dsh-sensitive-guard
+```
+
+### From source (development)
 
 ```bash
 # from the repository root
