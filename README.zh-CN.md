@@ -1,5 +1,9 @@
 # dsh-sensitive-guard
 
+[![CI](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/codeql.yml/badge.svg)](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/codeql.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 面向 [DeepSeek Harness](https://github.com/deepseek-ai/dsh) 的 host-only 安全插件：**拦截凭据读取与外发密钥**，并在密钥、令牌与 PII 进入模型、会话日志或 spill 文件前替换为占位符。
 
 > 状态：**0.0.0 预发布**。拦截与脱敏垂直切片已实现并有测试；状态表中标记为 _planned_ 的能力尚未实现，请勿当作可用功能。

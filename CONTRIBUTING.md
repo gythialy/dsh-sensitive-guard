@@ -44,6 +44,16 @@ Use Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, ...). CI 
 commit subjects. Keep security-relevant changes in focused commits, and describe the
 threat-model impact in the PR template.
 
+## Release
+
+- Tags matching `v*` run `.github/workflows/release.yml`: verify, build, publish to npm
+  with provenance, and create a GitHub release. The workflow needs an `NPM_TOKEN`
+  repository secret with publish rights.
+- Bump `version` in `package.json` and move the `CHANGELOG` entries out of
+  `[Unreleased]` in the release commit.
+- After the first release, land changes on `main` through pull requests; keep release
+  commits limited to the version and changelog.
+
 ## Licensing
 
 By contributing you agree that your contribution is licensed under Apache-2.0. Vendored

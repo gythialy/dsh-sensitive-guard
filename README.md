@@ -1,5 +1,9 @@
 # dsh-sensitive-guard
 
+[![CI](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/codeql.yml/badge.svg)](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/codeql.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 A host-only security plugin for [DeepSeek Harness](https://github.com/deepseek-ai/dsh): it **blocks credential reads and outbound secrets**, and **redacts secrets, tokens, and PII** before they reach the model, the session log, or a spill file.
 
 > Status: **0.0.0, pre-release**. The interception and redaction vertical slice is implemented and tested. Items marked _planned_ in the status table are not implemented yet; do not describe them as available.
