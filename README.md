@@ -1,5 +1,7 @@
 # dsh-sensitive-guard
 
+🇬🇧 English · 🇨🇳 [简体中文](README.zh-CN.md)
+
 [![CI](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/codeql.yml/badge.svg)](https://github.com/gythialy/dsh-sensitive-guard/actions/workflows/codeql.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -37,20 +39,22 @@ The guard only constrains content that traverses DSH's tool and message pipeline
 
 ## Status
 
-| Capability                                                           | State               |
-| -------------------------------------------------------------------- | ------------------- |
-| Config schema and validation                                         | ✅                  |
-| Path/argv/parameter/network policy engine                            | ✅                  |
-| Built-in high-risk baseline                                          | ✅ vendored         |
-| Secret/PII redaction, `value` + content, idempotence                 | ✅                  |
-| Five lifecycle hooks                                                 | ✅                  |
-| Hash-only audit log with rotation                                    | ✅                  |
-| Unit + integration tests, CI (format/lint/typecheck/test/build/pack) | ✅                  |
-| `/guard status\|on\|off\|restore` commands                           | planned             |
-| Count-only visibility notice (`redact.notify`)                       | planned             |
-| `bin/scan.mjs` repository/CI scanner                                 | planned             |
-| End-to-end profile + mock-provider test                              | planned             |
-| Process-level HTTP proxy                                             | out of scope for v1 |
+| Capability                                                           | State                                                                                |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Config schema and validation                                         | ✅                                                                                   |
+| Path/argv/parameter/network policy engine                            | ✅                                                                                   |
+| Built-in high-risk baseline                                          | ✅ vendored                                                                          |
+| Secret/PII redaction, `value` + content, idempotence                 | ✅                                                                                   |
+| Five lifecycle hooks                                                 | ✅                                                                                   |
+| Hash-only audit log with rotation                                    | ✅                                                                                   |
+| Unit + integration tests, CI (format/lint/typecheck/test/build/pack) | ✅                                                                                   |
+| `/guard status\|on\|off\|restore` commands                           | planned · [#1](https://github.com/gythialy/dsh-sensitive-guard/issues/1)             |
+| Count-only visibility notice (`redact.notify`)                       | planned · [#2](https://github.com/gythialy/dsh-sensitive-guard/issues/2)             |
+| `bin/scan.mjs` repository/CI scanner                                 | planned · [#3](https://github.com/gythialy/dsh-sensitive-guard/issues/3)             |
+| End-to-end profile + mock-provider test                              | planned · [#4](https://github.com/gythialy/dsh-sensitive-guard/issues/4)             |
+| Process-level HTTP proxy                                             | out of scope for v1 · [#5](https://github.com/gythialy/dsh-sensitive-guard/issues/5) |
+
+Planned capabilities are tracked as GitHub issues; each link above goes to its tracking issue.
 
 ## Requirements
 
@@ -95,7 +99,7 @@ redact:
   toolResults: true
   systemPrompt: true
   ptcLog: true
-  notify: false # planned
+  notify: false # planned: issue #2
 levels:
   input: aggressive # user/context messages
   output: balanced # tool results and system prompt
