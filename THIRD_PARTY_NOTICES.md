@@ -29,8 +29,12 @@ reproduced below where the upstream license requires it.
 - Source: https://github.com/jkt-check/dsh-secret-scrub
 - Modification: converted from JavaScript to TypeScript and adapted so the
   engine supplies `[SECRET:...]` and `[[PII_...]]` placeholders instead of the
-  upstream fixed placeholder. Tier ordering, patterns, validators, and
-  false-positive filters are preserved.
+  upstream fixed placeholder. Tier ordering, validators, and false-positive
+  filters are preserved. One pattern was adjusted: the
+  `private-key-truncated` alternation was split into two same-category rules
+  (head and tail) so CodeQL's `js/regex/missing-regexp-anchor` does not read
+  the intentional one-sided anchors as an operator-precedence mistake.
+  Matching behavior and scanning cost are unchanged.
 - Usage: secret/PII detection rule table and false-positive filtering.
 
 ## Runtime dependencies

@@ -91,8 +91,20 @@ export const SECRET_RULES: readonly CompiledSecretRule[] = Object.freeze([
     // (head truncation). Both present yields placeholder + middle slice +
     // placeholder. A lone BEGIN quoted in documentation over-redacts the
     // rest of the text — accepted, privacy-first.
-    pattern:
-      /^[\s\S]*?-----END (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----|-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----[\s\S]*$/g,
+    //
+    // The two truncation directions are separate same-category rules instead
+    // of one alternation: a single regex with one-sided ^/$ anchors is parsed
+    // as (^head)|(tail$) and CodeQL reports js/regex/missing-regexp-anchor.
+    // Keeping each branch anchored is also what bounds the scan: an
+    // unanchored [\s\S]*? would backtrack quadratically on large inputs.
+    pattern: /^[\s\S]*?-----END (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----/g,
+  },
+  {
+    category: 'private-key-truncated',
+    tier: 0,
+    // Tail truncation: an unclosed BEGIN redacts through the end of the text.
+    // Anchoring at $ keeps the greedy tail linear and makes the intent clear.
+    pattern: /-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----[\s\S]*$/g,
   },
   {
     category: 'api-key',

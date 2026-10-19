@@ -23,6 +23,13 @@ All notable changes to this project are documented here. The format follows
 - Hash-only JSONL audit with rotation.
 - Unit and fake-context integration tests.
 
+### Fixed
+
+- Split the vendored `private-key-truncated` alternation into two
+  same-category anchored rules (head and tail). Matching behavior, hit counts,
+  and linear scanning cost are unchanged, and CodeQL's
+  `js/regex/missing-regexp-anchor` operator-precedence alert is resolved.
+
 ### Known limitations
 
 - `redact.notify`, `/guard` commands, `pii.restore`, and `bin/scan.mjs` are not

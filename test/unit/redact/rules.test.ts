@@ -56,6 +56,37 @@ describe('tier 0 credentials', () => {
     ])
   })
 
+  it('redacts head- and tail-truncated PEM remnants', () => {
+    const [begin = '', body = '', end = ''] = SAMPLE.pem.split('\n')
+
+    const head = redact('minimal', `log line\n${end}\nafter`)
+    expect(head.text).toContain('[SECRET:private-key-truncated:')
+    expect(head.text).toContain('after')
+    expect(head.text).not.toContain('PRIVATE KEY')
+    expect(head.hits).toEqual([
+      expect.objectContaining({ category: 'private-key-truncated', count: 1 }),
+    ])
+
+    const tail = redact('minimal', `${begin}\n${body}\n`)
+    expect(tail.text).toMatch(/^\[SECRET:private-key-truncated:[A-Z2-7]{4}\]$/)
+    expect(tail.text).not.toContain('U3ludGhldGlj')
+  })
+
+  it('redacts the leading truncation span and is idempotent afterwards', () => {
+    const end = SAMPLE.pem.split('\n')[2] ?? ''
+    const text = `a\n${end}\nb\n`
+    const first = redact('minimal', text)
+    expect(first.text).not.toContain('-----END')
+    expect(first.text).toContain('b')
+    expect(first.hits).toEqual([
+      expect.objectContaining({ category: 'private-key-truncated', count: 1 }),
+    ])
+
+    const second = redact('minimal', first.text)
+    expect(second.changed).toBe(false)
+    expect(second.text).toBe(first.text)
+  })
+
   it('redacts AWS, GitHub, and Google credentials', () => {
     for (const [value, category] of [
       [SAMPLE.awsAccessKey, 'aws-access-key'],
