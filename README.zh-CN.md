@@ -138,6 +138,20 @@ PII key 文件为 32 字节随机值，权限 `0600`（父目录 `0700`）。不
 - `/guard on` / `/guard off`：仅对当前进程切换 `enforce`/`monitor`，不持久化。
 - `/guard restore <placeholder> <file>`：需 `pii.restore: true`；把原始 PII 写入新的 `0600` 文件，拒绝覆盖，绝不回显原值。映射只在内存中，只有开启 restore 后在本进程内生成的占位符可恢复；密钥仍不可逆。
 
+## 扫描
+
+包内附带独立扫描器，复用同一套规则，只输出类别、相对路径、计数和行号：
+
+```bash
+pnpm build
+node bin/scan.mjs --staged          # 当前仓库已 staged 的文件
+node bin/scan.mjs src test          # 指定路径
+node bin/scan.mjs --json --no-exit-code .
+```
+
+退出码：`0` 干净、`1` 有命中、`2` 用法/IO 错误。超过 `--max-bytes`
+（默认 8 MiB）和二进制文件会跳过；绝不打印匹配到的原值。
+
 ## 审计
 
 目录 `0700`、文件 `0600`，超过 `rotateBytes` 轮转，保留 5 份。写失败只 warn 一次，不影响工具调用。记录示例见英文 README。
