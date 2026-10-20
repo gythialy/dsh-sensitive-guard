@@ -1,9 +1,9 @@
-# Bundle patch for @gythialy/dsh-sensitive-guard. It is mounted as one insert
+# Bundle patch for @r0cky20/dsh-sensitive-guard. It is mounted as one insert
 # over the empty profile root; a profile's own patch layer can override this
 # row by id.
 - insert:
     - id: sensitive-guard
-      name: '@gythialy/dsh-sensitive-guard'
+      name: '@r0cky20/dsh-sensitive-guard'
       config:
         mode: monitor
         redact:

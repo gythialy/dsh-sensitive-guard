@@ -89,7 +89,7 @@ dsh plugin --profile web add link:"$PWD"
 ```yaml
 # ~/.dsh/profiles/web/cordis.patch.yml
 - id: sensitive-guard
-  name: '@gythialy/dsh-sensitive-guard'
+  name: '@r0cky20/dsh-sensitive-guard'
   config:
     mode: monitor
 ```

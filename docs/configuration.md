@@ -262,7 +262,7 @@ Known blind spots — by design, not bugs:
 ```yaml
 # ~/.dsh/profiles/web/cordis.patch.yml
 - id: sensitive-guard
-  name: '@gythialy/dsh-sensitive-guard'
+  name: '@r0cky20/dsh-sensitive-guard'
   config:
     mode: monitor
     levels:
