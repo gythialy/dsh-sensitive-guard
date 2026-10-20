@@ -13,9 +13,8 @@ import { asBlocks, asContent, recordRedactions, sessionIdOf, type GuardRuntime }
 declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
     /** Plugin-authored user-role notices that are never treated as user input. */
-    plugin: {
-      kind: 'plugin'
-      plugin: string
+    'sensitive-guard': {
+      kind: 'sensitive-guard'
       form?: 'notice'
       summary?: string
     }
@@ -65,8 +64,7 @@ export function registerPreStep(ctx: Context, runtime: GuardRuntime): void {
           createUserMessage({
             content: [{ type: 'text', text }],
             source: {
-              kind: 'plugin',
-              plugin: 'sensitive-guard',
+              kind: 'sensitive-guard',
               form: 'notice',
               summary: text.slice(0, 120),
             },

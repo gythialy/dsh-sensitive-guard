@@ -26,6 +26,9 @@ All notable changes to this project are documented here. The format follows
 - `redact.notify`: one count-only plugin notice per redacted step.
 - `bin/scan.mjs`: standalone repository/CI scanner with `--json`,
   `--staged`, `--max-bytes`, binary skipping, and masked output.
+- End-to-end headless profile test with a disposable `DSH_HOME`, a linked plugin,
+  a local OpenAI-compatible mock provider, and assertions on the provider request
+  and audit log. Runs as `pnpm test:e2e` and in CI on Node 24.
 - Unit and fake-context integration tests.
 
 ### Fixed
@@ -46,7 +49,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Known limitations
 
-- No end-to-end mock-provider test and no process-level HTTP proxy.
+- No process-level HTTP proxy.
 
 ## [0.0.0] - 2026-10-19
 

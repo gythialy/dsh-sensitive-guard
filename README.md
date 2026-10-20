@@ -203,6 +203,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm test:coverage
+pnpm test:e2e   # disposable headless profile + local mock provider
 pnpm build
 pnpm pack:check
 ```

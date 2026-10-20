@@ -56,6 +56,10 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: End-to-end headless profile
+        if: matrix.node == 24
+        run: pnpm test:e2e
+
       - name: Validate package
         run: pnpm publint
 
