@@ -10,9 +10,14 @@ import path from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { CommandResult } from '@deepseek-ai/dsh-commands'
 import type { GuardRuntime } from '../hooks/runtime.js'
+import { collectEgressReport, egressReportYaml } from '../egress/report.js'
 import {
   egressCanaryText,
   egressDisabledText,
+  egressReportFailed,
+  egressReportInvalidSince,
+  egressReportText,
+  egressReportUsage,
   egressStatusText,
   egressUnavailableText,
   modeText,
@@ -72,17 +77,66 @@ function status(runtime: GuardRuntime): CommandResult {
   }
 }
 
-/** `/guard egress [status|canary]`: count-only view plus a loopback probe. */
+/**
+ * `/guard egress report [--since <window>] [--yaml]`: aggregate the audit log
+ * into destinations. Counts and host:port only; nothing is written to disk, and
+ * it works even when the guard is currently disabled.
+ */
+async function egressReportCommand(
+  runtime: GuardRuntime,
+  tokens: readonly string[],
+): Promise<CommandResult> {
+  const locale = runtime.locale()
+  let since: string | undefined
+  let yaml = false
+
+  for (let index = 2; index < tokens.length; index += 1) {
+    const token = tokens[index] ?? ''
+    if (token === '--yaml') {
+      yaml = true
+      continue
+    }
+    if (token === '--since') {
+      const value = tokens[index + 1]
+      if (value === undefined) return { kind: 'error', text: egressReportUsage(locale) }
+      since = value
+      index += 1
+      continue
+    }
+    if (token.startsWith('--since=')) {
+      since = token.slice('--since='.length)
+      continue
+    }
+    return { kind: 'error', text: egressReportUsage(locale) }
+  }
+
+  try {
+    const report = await collectEgressReport(runtime.audit.path, { since })
+    return {
+      kind: 'success',
+      text: yaml ? egressReportYaml(report) : egressReportText(report, locale),
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === 'invalid-since') {
+      return { kind: 'error', text: egressReportInvalidSince(locale) }
+    }
+    return { kind: 'error', text: egressReportFailed(locale) }
+  }
+}
+
+/** `/guard egress [status|canary|report]`: count-only views and a probe. */
 async function egressCommand(
   runtime: GuardRuntime,
   tokens: readonly string[],
 ): Promise<CommandResult> {
   const locale = runtime.locale()
+  const verb = tokens[1] ?? 'status'
+  if (verb === 'report') return egressReportCommand(runtime, tokens)
+
   if (!runtime.config.egress.enabled) return { kind: 'error', text: egressDisabledText(locale) }
   const controller = runtime.egress
   if (controller === undefined) return { kind: 'error', text: egressUnavailableText(locale) }
 
-  const verb = tokens[1] ?? 'status'
   if (verb === 'status') {
     return { kind: 'success', text: egressStatusText(controller.snapshot(), locale) }
   }
@@ -173,7 +227,9 @@ export function registerGuardCommands(ctx: Context, runtime: GuardRuntime): void
     commandCtx.commands.register({
       name: 'guard',
       description: 'Sensitive Guard status, runtime mode, and PII restore',
-      input: { hint: '[status|on|off|egress [status|canary]|restore <placeholder> <file>]' },
+      input: {
+        hint: '[status|on|off|egress [status|canary|report]|restore <placeholder> <file>]',
+      },
       handler: ({ rawInput }) => runGuardCommand(runtime, rawInput),
     })
   })

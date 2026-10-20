@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -256,6 +256,87 @@ describe('/guard egress', () => {
     expect(text).toContain('敏感信息守卫出站守卫')
     expect(text).toContain('已绑定')
     expect(text).toContain('隧道=2')
+  })
+
+  it('reports destinations from the audit log', async () => {
+    const runtime = await egressRuntime(controller())
+    const ts = Date.now() - 1000
+    const line = (overrides: Record<string, unknown>) =>
+      JSON.stringify({
+        ts,
+        phase: 'egress',
+        event: 'connect',
+        mode: 'monitor',
+        ...overrides,
+      })
+    await writeFile(
+      runtime.audit.path,
+      [
+        line({ host: 'api.example.com', port: 443, decision: 'allow', enforced: false }),
+        line({ host: 'api.example.com', port: 443, decision: 'allow', enforced: false }),
+        line({ host: 'blocked.example', port: 8443, decision: 'deny', enforced: true }),
+      ].join('\n'),
+    )
+
+    const result = await runGuardCommand(runtime, 'egress report')
+    expect(result.kind).toBe('success')
+    const text = result.kind === 'success' ? (result.text ?? '') : ''
+    expect(text).toContain('records: 3 connects, 1 blocked, 2 destinations')
+    expect(text).toContain('api.example.com:443')
+    expect(text).toContain('blocked.example:8443')
+    expect(text).not.toContain('secret')
+  })
+
+  it('reports even while the guard is disabled', async () => {
+    const { runtime } = await makeRuntime()
+    await writeFile(
+      runtime.audit.path,
+      JSON.stringify({
+        ts: Date.now() - 500,
+        phase: 'egress',
+        event: 'connect',
+        host: 'old.example',
+        port: 443,
+        decision: 'allow',
+        enforced: false,
+      }),
+    )
+    const result = await runGuardCommand(runtime, 'egress report')
+    expect(result.kind).toBe('success')
+    expect(result.kind === 'success' ? result.text : '').toContain('old.example:443')
+  })
+
+  it('prints a suggested allowlist with --yaml', async () => {
+    const runtime = await egressRuntime(controller())
+    await writeFile(
+      runtime.audit.path,
+      JSON.stringify({
+        ts: Date.now() - 500,
+        phase: 'egress',
+        event: 'connect',
+        host: 'api.example.com',
+        port: 443,
+        decision: 'allow',
+        enforced: false,
+      }),
+    )
+    const result = await runGuardCommand(runtime, 'egress report --yaml')
+    expect(result.kind).toBe('success')
+    const text = result.kind === 'success' ? (result.text ?? '') : ''
+    expect(text).toContain('egress:')
+    expect(text).toContain('unknown: deny')
+    expect(text).toContain("- 'api.example.com:443'")
+  })
+
+  it('rejects an invalid window and unknown flags', async () => {
+    const runtime = await egressRuntime(controller())
+    const bad = await runGuardCommand(runtime, 'egress report --since weekly')
+    expect(bad.kind).toBe('error')
+    expect(bad.kind === 'error' ? bad.text : '').toContain('--since accepts')
+
+    const unknown = await runGuardCommand(runtime, 'egress report --nope')
+    expect(unknown.kind).toBe('error')
+    expect(unknown.kind === 'error' ? unknown.text : '').toContain('Usage:')
   })
 
   it('rejects an unknown egress subcommand with usage', async () => {

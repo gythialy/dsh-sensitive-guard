@@ -8,6 +8,7 @@
 import type { RedactionHit } from './contracts.js'
 import type { CanaryCode, CanaryResult } from './egress/canary.js'
 import type { EgressSnapshot } from './egress/index.js'
+import type { EgressReport } from './egress/report.js'
 import type { GuardLocale } from './locale.js'
 
 export type { GuardLocale } from './locale.js'
@@ -509,6 +510,85 @@ export function egressCanaryText(
   )
 }
 
+/** `/guard egress report`: destinations aggregated from the audit log. */
+export function egressReportText(report: EgressReport, locale: GuardLocale = 'en'): string {
+  const zh = locale === 'zh'
+  const since = new Date(report.sinceTs).toISOString()
+  const heading = zh
+    ? '敏感信息守卫出站报告（自 ' + since + ' 起）'
+    : 'Sensitive Guard egress report (since ' + since + ')'
+
+  if (report.connects === 0) {
+    return [
+      heading,
+      zh
+        ? '  窗口内没有连接记录。先跑一些流量，或放宽 --since。'
+        : '  no connect records in this window; run some traffic or widen --since.',
+      egressReportUsage(locale),
+    ].join(NL)
+  }
+
+  const lines = [heading]
+  lines.push(
+    (zh ? '  记录: ' : '  records: ') +
+      String(report.connects) +
+      (zh ? ' 次连接，' : ' connects, ') +
+      String(report.denied) +
+      (zh ? ' 次拦截，' : ' blocked, ') +
+      String(report.entries.length) +
+      (zh ? ' 个目标，' : ' destinations, ') +
+      String(report.files) +
+      (zh ? ' 个文件' : ' file(s)'),
+  )
+  lines.push(zh ? '  高频目标:' : '  top destinations:')
+  for (const entry of report.entries.slice(0, 10)) {
+    const target = entry.host + ':' + String(entry.port)
+    const label = entry.denied === 0 ? 'allow' : entry.allowed === 0 ? 'blocked' : 'allow+blocked'
+    lines.push('    ' + target.padEnd(34) + String(entry.connects).padStart(6) + '  ' + label)
+  }
+  if (report.entries.length > 10) {
+    const more = report.entries.length - 10
+    lines.push(
+      zh
+        ? '    …还有 ' + String(more) + ' 个目标'
+        : '    … ' + String(more) + ' more destination(s)',
+    )
+  }
+  if (report.truncated) {
+    lines.push(
+      zh
+        ? '  注意: 超出报告大小上限，较早的轮转日志未读取。'
+        : '  note: the byte budget cut older rotations from this report.',
+    )
+  }
+  lines.push(
+    zh
+      ? '  提示: /guard egress report --yaml 输出可粘贴的 allow 清单。'
+      : '  hint: /guard egress report --yaml prints a suggested allowlist.',
+  )
+  return lines.join(NL)
+}
+
+export function egressReportUsage(locale: GuardLocale = 'en'): string {
+  return locale === 'zh'
+    ? '用法: /guard egress report [--since 7d] [--yaml]'
+    : 'Usage: /guard egress report [--since 7d] [--yaml]'
+}
+
+export function egressReportInvalidSince(locale: GuardLocale = 'en'): string {
+  return locale === 'zh'
+    ? '敏感信息守卫: --since 接受 30s、15m、24h、7d 或 ISO 日期。' + NL + egressReportUsage('zh')
+    : 'Sensitive Guard: --since accepts 30s, 15m, 24h, 7d, or an ISO date.' +
+        NL +
+        egressReportUsage('en')
+}
+
+export function egressReportFailed(locale: GuardLocale = 'en'): string {
+  return locale === 'zh'
+    ? '敏感信息守卫: 读取审计日志失败，报告未生成。'
+    : 'Sensitive Guard: the audit log could not be read, so no report was produced.'
+}
+
 /** `/guard egress` before `egress.enabled`. */
 export function egressDisabledText(locale: GuardLocale = 'en'): string {
   return locale === 'zh'
@@ -591,14 +671,14 @@ const COMMANDS: Record<GuardLocale, Array<[string, string]>> = {
     ['status', 'show the current settings'],
     ['on', 'enforce for this process'],
     ['off', 'monitor for this process'],
-    ['egress [status|canary]', 'egress guard state and a loopback canary probe'],
+    ['egress [status|canary|report]', 'egress guard state, canary probe, destination report'],
     ['restore <placeholder> <file>', 'write one restored PII value (mode 0600)'],
   ],
   zh: [
     ['status', '显示当前设置'],
     ['on', '当前进程启用 enforce'],
     ['off', '当前进程切换为 monitor'],
-    ['egress [status|canary]', '出站守卫状态与回环探针'],
+    ['egress [status|canary|report]', '出站守卫状态、回环探针与目标统计'],
     ['restore <placeholder> <file>', '写入一个恢复的 PII 值（0600 权限）'],
   ],
 }

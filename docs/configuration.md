@@ -191,6 +191,20 @@ Verify with `/guard egress status` (does the live value point at this listener?)
 and `/guard egress canary` (does a real CONNECT tunnel echo?). A canary "denied"
 result usually means `127.0.0.1` is in your `deny` list.
 
+Bootstrap an allowlist from real traffic instead of guessing:
+
+```text
+/guard egress report              # last 7d, top destinations with counts
+/guard egress report --since 24h  # narrower window
+/guard egress report --yaml       # suggested egress.allow block to paste
+```
+
+The report reads the audit log and its rotations, aggregates `phase: "egress"`
+connect records, and prints `host:port`, connect counts, and blocked counts.
+Nothing is written to disk: `--yaml` is a suggestion to review and paste, not an
+edit. Rolling `unknown` to `deny` is safe only after the report shows every host
+the workflow legitimately needs.
+
 What the guard sees: HTTPS shows `host:port` only (a CONNECT tunnel; no SNI
 parsing, no CA); plain HTTP shows the request line, headers, and body, but the
 audit log records only host, port, decision, rule, bytes, and duration. A

@@ -137,7 +137,7 @@ PII key 文件为 32 字节随机值，权限 `0600`（父目录 `0700`）。不
 - `/guard status`：模式、等级、规则数、审计与 PII/restore 状态；不含明文或匹配值。
 - `/guard on` / `/guard off`：仅对当前进程切换 `enforce`/`monitor`，不持久化。
 - `/guard restore <placeholder> <file>`：需 `pii.restore: true`；把原始 PII 写入新的 `0600` 文件，拒绝覆盖，绝不回显原值。映射只在内存中，只有开启 restore 后在本进程内生成的占位符可恢复；密钥仍不可逆。
-- `/guard egress [status|canary]`：可选出站守卫的状态：监听、`https_proxy` 是否指向本进程、规则数、隧道/拦截/字节计数、最近目标，以及回环探针。
+- `/guard egress [status|canary|report]`：可选出站守卫的状态：监听、`https_proxy` 是否指向本进程、规则数、隧道/拦截/字节计数、最近目标、回环探针，以及 `report`（从审计日志汇总目标，支持 `--since 7d` 与 `--yaml`）。
 
 ### 出站守卫（可选，默认关闭）
 

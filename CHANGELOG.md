@@ -21,9 +21,14 @@ All notable changes to this project are documented here. The format follows
 - `/guard egress [status|canary]`: listener, live `https_proxy` wiring check,
   counters, recent destinations, and a loopback canary that proves the tunnel
   instead of claiming coverage.
+- `/guard egress report [--since 7d] [--yaml]`: aggregates `phase: "egress"`
+  connect records (active log plus rotations) into destination counts so an
+  allowlist can be built from real traffic; `--yaml` prints a suggested
+  `egress.allow` block without writing anything.
 - Tests: policy, real-listener CONNECT and plain-HTTP forwarding, canary
-  outcomes, upstream chaining, `apply()` mount/audit/dispose, and a spawned
-  `curl -x` allow/deny pair.
+  outcomes, upstream chaining, `apply()` mount/audit/dispose, a spawned
+  `curl -x` allow/deny pair, and the audit report (windowing, rotations,
+  malformed lines, YAML suggestion).
 
 ## [0.1.1] - 2026-10-20
 
