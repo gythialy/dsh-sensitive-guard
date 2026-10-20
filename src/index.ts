@@ -17,8 +17,10 @@ import { registerPostExecute } from './hooks/post-execute.js'
 import { registerPreExecute } from './hooks/pre-execute.js'
 import { registerPreStep } from './hooks/pre-step.js'
 import { registerPtcLog } from './hooks/ptc-log.js'
-import { registerSystemPrompt } from './hooks/system-prompt.js'
 import type { GuardRuntime } from './hooks/runtime.js'
+import { registerSystemPrompt } from './hooks/system-prompt.js'
+import { localeFromSettings } from './locale.js'
+import { startupText } from './messages.js'
 import { createPolicyEngine } from './policy/index.js'
 import { createRedactor } from './redact/index.js'
 import { safeLogger } from './util/logger.js'
@@ -59,7 +61,14 @@ export function apply(ctx: Context, config?: GuardConfig): void {
     cwd: process.cwd(),
   })
 
-  const runtime: GuardRuntime = { config: settings, redactor, policy, audit, logger }
+  const runtime: GuardRuntime = {
+    config: settings,
+    redactor,
+    policy,
+    audit,
+    logger,
+    locale: () => localeFromSettings(ctx),
+  }
   registerPreStep(ctx, runtime)
   registerPreExecute(ctx, runtime)
   registerPostExecute(ctx, runtime)
@@ -68,7 +77,14 @@ export function apply(ctx: Context, config?: GuardConfig): void {
   registerGuardCommands(ctx, runtime)
 
   logger.info(
-    `sensitive-guard: active in ${settings.mode} mode ` +
-      `(${policy.ruleCount} policy rules, ${redactor.ruleCount} redaction rules)`,
+    startupText(
+      {
+        mode: settings.mode,
+        policyRules: policy.ruleCount,
+        redactionRules: redactor.ruleCount,
+        auditEnabled: settings.audit.enabled,
+      },
+      runtime.locale(),
+    ),
   )
 }

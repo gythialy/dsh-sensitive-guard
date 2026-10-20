@@ -2,6 +2,7 @@ import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { PolicyEngine } from '../../../src/contracts.js'
+import { EVALUATION_FAILURE_REASON } from '../../../src/messages.js'
 import { createPolicyEngine, loadRuleSet } from '../../../src/policy/index.js'
 import { bareConfig, configWith, TempWorkspace } from './helpers.js'
 
@@ -415,7 +416,7 @@ describe('failure handling', () => {
     const decision = engine.evaluate({ tool: 'read', args: { path: '.env' }, cwd: ws.dir })
     expect(decision.action).toBe('deny')
     expect(decision.matched).toBe(false)
-    expect(decision.reason).toBe('sensitive-guard: policy evaluation failed')
+    expect(decision.reason).toBe(EVALUATION_FAILURE_REASON)
     expect(decision.reason).not.toContain('.env')
 
     const lax = createPolicyEngine({
@@ -444,7 +445,8 @@ describe('failure handling', () => {
 
     const decision = engine.evaluate({ tool: 'read', args: {}, cwd: ws.dir })
     expect(decision.action).toBe('deny')
-    expect(decision.reason).toBe('sensitive-guard: policy evaluation failed')
+    expect(decision.failure).toBe(true)
+    expect(decision.reason).toBe(EVALUATION_FAILURE_REASON)
   })
 })
 

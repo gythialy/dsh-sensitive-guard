@@ -80,7 +80,7 @@ export function piiPlaceholder(type: string, value: string, key: Buffer): string
 function fallbackKey(logger: Logger, reason: string): Buffer {
   if (!warnedFallback) {
     warnedFallback = true
-    logger.warn(`sensitive-guard: ${reason}; using an ephemeral process key`)
+    logger.warn(`Sensitive Guard: ${reason}; using an ephemeral process key.`)
   }
   processFallbackKey ??= randomBytes(KEY_BYTES)
   return processFallbackKey

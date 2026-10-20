@@ -102,7 +102,7 @@ export class AuditLog {
         if (!this.warned) {
           this.warned = true
           this.options.logger.warn(
-            `sensitive-guard: audit log disabled after a write failure (${error instanceof Error ? error.name : 'error'})`,
+            `Sensitive Guard: audit log disabled after a write failure (${error instanceof Error ? error.name : 'error'}).`,
           )
         }
       })

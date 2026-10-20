@@ -98,6 +98,10 @@ export interface PolicyDecision {
   command?: string
   /** True when the match came from a network rule. */
   network?: boolean
+  /** Tags from the matched rule, used only to classify the prompt. */
+  tags?: string[]
+  /** True when evaluation threw and the fail-closed default was applied. */
+  failure?: boolean
   /** Per-rule gray release: false reports but does not enforce this match. */
   enforce?: boolean
 }

@@ -38,7 +38,7 @@ async function makeRuntime(restore = true): Promise<{ runtime: GuardRuntime; dir
   } as unknown as AuditLog
   return {
     dir,
-    runtime: { config, redactor, policy, audit, logger: noopLogger },
+    runtime: { config, redactor, policy, audit, logger: noopLogger, locale: () => 'en' },
   }
 }
 
@@ -58,12 +58,27 @@ describe('/guard command', () => {
     const result = await runGuardCommand(runtime, ' status ')
     expect(result.kind).toBe('success')
     const text = result.kind === 'success' ? (result.text ?? '') : ''
-    expect(text).toContain('mode=monitor')
-    expect(text).toContain('policyRules=7')
-    expect(text).toContain('redactionRules=')
-    expect(text).toContain('audit=off')
-    expect(text).toContain('restore=on')
+    expect(text).toContain('mode: monitor')
+    expect(text).toContain('rules: policy=7')
+    expect(text).toContain('redaction=')
+    expect(text).toContain('audit: off')
+    expect(text).toContain('pii restore: on')
     expect(text).not.toContain('@')
+  })
+
+  it('renders status and mode text in Chinese when DSH is Chinese', async () => {
+    const { runtime } = await makeRuntime()
+    runtime.locale = () => 'zh'
+
+    const status = await runGuardCommand(runtime, 'status')
+    const text = status.kind === 'success' ? (status.text ?? '') : ''
+    expect(text).toContain('敏感信息守卫')
+    expect(text).toContain('模式: monitor')
+    expect(text).toContain('规则: 策略=7')
+    expect(text).toContain('PII 恢复: 开')
+
+    const mode = await runGuardCommand(runtime, 'on')
+    expect(mode.kind === 'success' ? mode.text : '').toContain('仅当前进程')
   })
 
   it('toggles the runtime mode without persisting it', async () => {
@@ -82,7 +97,7 @@ describe('/guard command', () => {
       'restore [[PII_EMAIL_3f9a2c1d]] ' + path.join(os.tmpdir(), 'never'),
     )
     expect(result.kind).toBe('error')
-    expect(result.kind === 'error' ? result.text : '').toContain('disabled')
+    expect(result.kind === 'error' ? result.text : '').toContain('PII restore is off')
   })
 
   it('writes a restored PII value to a 0600 file without echoing it', async () => {
@@ -132,6 +147,6 @@ describe('/guard command', () => {
     const { runtime } = await makeRuntime()
     const result = await runGuardCommand(runtime, 'bogus')
     expect(result.kind).toBe('error')
-    expect(result.kind === 'error' ? result.text : '').toContain('usage')
+    expect(result.kind === 'error' ? result.text : '').toContain('Usage:')
   })
 })

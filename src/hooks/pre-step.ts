@@ -8,6 +8,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-agent'
 import { createUserMessage, type ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { RedactionHit } from '../contracts.js'
+import { noticeText } from '../messages.js'
 import { asBlocks, asContent, recordRedactions, sessionIdOf, type GuardRuntime } from './runtime.js'
 
 declare module '@deepseek-ai/dsh-llm' {
@@ -19,12 +20,6 @@ declare module '@deepseek-ai/dsh-llm' {
       summary?: string
     }
   }
-}
-
-/** Count-only notice text; category names and counts are never sensitive. */
-export function noticeText(hits: readonly RedactionHit[]): string {
-  const categories = hits.map((hit) => `${hit.category}×${hit.count}`).join(', ')
-  return `Sensitive Guard redacted ${categories}. Original values were replaced with placeholders.`
 }
 
 function mergeHits(target: Map<string, number>, hits: readonly RedactionHit[]): void {
@@ -58,7 +53,7 @@ export function registerPreStep(ctx: Context, runtime: GuardRuntime): void {
       let nextMessages = messages
       if (config.redact.notify) {
         const hits = [...totals].map(([category, count]) => ({ category, count }))
-        const text = noticeText(hits)
+        const text = noticeText(hits, runtime.locale())
         nextMessages = [
           ...messages,
           createUserMessage({
