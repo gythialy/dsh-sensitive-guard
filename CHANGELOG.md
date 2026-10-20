@@ -44,8 +44,12 @@ All notable changes to this project are documented here. The format follows
   removed.
 - Canonical package name is now `@gythialy/dsh-sensitive-guard`, required by GitHub
   Packages. The same build is distributed as a GitHub Release tarball and via
-  GitHub Packages; npmjs remains deferred and tracked in #6. The release workflow no
-  longer needs `NPM_TOKEN` and attaches `SHA256SUMS` to the release.
+  GitHub Packages; npmjs remains deferred and tracked in #6.
+- Release automation now starts from a human-created **published GitHub Release**
+  instead of a tag push. The workflow validates the tag against `package.json`,
+  publishes GitHub Packages with `GITHUB_TOKEN`, publishes npmjs only when
+  `NPM_TOKEN` exists, and uploads `dsh-sensitive-guard.tgz` plus `SHA256SUMS` to
+  the existing release. It never creates the release.
 
 ### Known limitations
 

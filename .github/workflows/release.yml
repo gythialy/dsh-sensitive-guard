@@ -1,21 +1,27 @@
 name: Release
 
 on:
-  push:
-    tags: ['v*']
+  release:
+    types: [published]
 
 permissions:
   contents: write
   packages: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
 
 jobs:
   release:
-    name: Publish GitHub Packages and Release
+    name: Publish GitHub Packages, npm, and release assets
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout release tag
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.release.tag_name }}
           fetch-depth: 0
 
       - name: Setup pnpm
@@ -38,10 +44,34 @@ jobs:
       - name: Verify
         run: pnpm verify
 
+      - name: Check release tag matches package version
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          tag="${{ github.event.release.tag_name }}"
+          if [ "v${version}" != "${tag}" ]; then
+            echo "::error::release tag ${tag} does not match package version v${version}"
+            exit 1
+          fi
+
       - name: Publish GitHub Packages
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish npmjs when NPM_TOKEN is configured
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "NPM_TOKEN is not configured; skipping npmjs publication"
+            exit 0
+          fi
+          config="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          printf '//registry.npmjs.org/:_authToken=%s\n' "${NPM_TOKEN}" >> "${config}"
+          npm publish --registry https://registry.npmjs.org --access public --provenance
 
       - name: Pack release tarball
         run: |
@@ -51,7 +81,10 @@ jobs:
           cd dist
           sha256sum dsh-sensitive-guard.tgz > SHA256SUMS
 
-      - name: Create GitHub release
-        run: gh release create "$GITHUB_REF_NAME" dist/dsh-sensitive-guard.tgz dist/SHA256SUMS --generate-notes --title "$GITHUB_REF_NAME"
+      - name: Upload assets to the published release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release upload "${{ github.event.release.tag_name }}" \
+            dist/dsh-sensitive-guard.tgz dist/SHA256SUMS --clobber

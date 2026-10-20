@@ -1,16 +1,19 @@
 # Releasing
 
-The plugin ships through two channels from the same tag:
+Releases are started by a human and published by automation. Creating and
+publishing a GitHub Release is the only trigger; the workflow does not create
+the release.
 
-| Channel                                           | Audience                                              | Auth on install              |
-| ------------------------------------------------- | ----------------------------------------------------- | ---------------------------- |
-| GitHub Release tarball                            | everyone                                              | none                         |
-| GitHub Packages (`@gythialy/dsh-sensitive-guard`) | users with a GitHub token                             | classic PAT, `read:packages` |
-| npmjs                                             | deferred until an account is available; tracked in #6 | none                         |
+| Channel                                           | Audience                          | Auth on install              |
+| ------------------------------------------------- | --------------------------------- | ---------------------------- |
+| GitHub Release tarball                            | everyone                          | none                         |
+| GitHub Packages (`@gythialy/dsh-sensitive-guard`) | users with a GitHub token         | classic PAT, `read:packages` |
+| npmjs                                             | optional, when `NPM_TOKEN` exists | none                         |
+| GitHub Release assets                             | everyone                          | none                         |
 
 GitHub Packages requires a scoped package name, so the canonical name is
-`@gythialy/dsh-sensitive-guard` everywhere. The repository keeps its name
-`gythialy/dsh-sensitive-guard`, so the GitHub Release URL stays unchanged.
+`@gythialy/dsh-sensitive-guard`. The repository stays
+`gythialy/dsh-sensitive-guard`.
 
 ## 1. Prepare the release commit
 
@@ -19,6 +22,7 @@ pnpm install
 pnpm version 0.1.0 --no-git-tag-version
 # move CHANGELOG [Unreleased] items into [0.1.0] - YYYY-MM-DD
 pnpm verify
+pnpm test:e2e
 pnpm pack --dry-run
 ```
 
@@ -43,27 +47,36 @@ rm -rf "$TMP_HOME" .tmp/*.tgz
 The scoped package must appear in `dsh.profile.bundles` and the
 `sensitive-guard` row must be present in `--dump-config`.
 
-## 3. Tag and publish
+## 3. Create and publish the Release
+
+Draft first, review the notes, then publish:
 
 ```bash
-git tag -a v0.1.0 -m "dsh-sensitive-guard v0.1.0"
-git push origin v0.1.0
-gh run list --workflow=release.yml
-gh run watch <run-id> --exit-status
+gh release create v0.1.0 --draft \
+  --title "v0.1.0" \
+  --notes-file .tmp/release-notes.md
 ```
 
-`.github/workflows/release.yml` performs:
+Or use the GitHub UI: **Releases → Draft a new release**, choose/create the
+`v0.1.0` tag, review, then **Publish release**.
 
-1. `pnpm verify`;
-2. `npm publish --access public` to `https://npm.pkg.github.com` using the
-   workflow `GITHUB_TOKEN` (`packages: write`);
-3. `pnpm pack`, renamed to version-free `dsh-sensitive-guard.tgz`, plus
-   `SHA256SUMS`;
-4. `gh release create` with both assets.
+Publishing emits `release: published` and runs
+`.github/workflows/release.yml`:
 
-No `NPM_TOKEN` secret is needed.
+1. checkout the release tag;
+2. require `v<package.json version>` to equal the tag;
+3. `pnpm verify`;
+4. publish to GitHub Packages with the workflow `GITHUB_TOKEN`
+   (`packages: write`);
+5. if `NPM_TOKEN` is configured, publish the same version to npmjs with
+   `--provenance` (`id-token: write`);
+6. pack `dsh-sensitive-guard.tgz` and `SHA256SUMS`;
+7. upload both assets to the already-published release.
 
-## 4. Make the package public
+A missing `NPM_TOKEN` is not an error: the npmjs step logs a skip. No
+repository secret is needed for GitHub Packages.
+
+## 4. Make the GitHub Packages package public
 
 The first GitHub Packages publication is **private**. In
 `Repository → Packages → @gythialy/dsh-sensitive-guard → Package settings →
@@ -82,7 +95,7 @@ DSH_HOME="$TMP_HOME" dsh --profile web --dump-config | grep -A3 sensitive-guard
 rm -rf "$TMP_HOME"
 ```
 
-Also verify `SHA256SUMS`:
+Checksums:
 
 ```bash
 curl -LO https://github.com/gythialy/dsh-sensitive-guard/releases/download/v0.1.0/SHA256SUMS
@@ -90,8 +103,8 @@ curl -LO https://github.com/gythialy/dsh-sensitive-guard/releases/download/v0.1.
 shasum -a 256 -c SHA256SUMS   # macOS; use sha256sum -c on Linux
 ```
 
-`latest/download/dsh-sensitive-guard.tgz` is stable because the asset name has
-no version in it.
+`latest/download/dsh-sensitive-guard.tgz` stays stable because the asset name
+has no version.
 
 ### GitHub Packages (token)
 
@@ -106,30 +119,30 @@ export GITHUB_PACKAGES_TOKEN=ghp_xxx   # classic PAT, read:packages
 DSH_HOME="$(mktemp -d)" dsh plugin --profile web add @gythialy/dsh-sensitive-guard
 ```
 
-## 6. npmjs (later)
+### npmjs (when enabled)
 
-Issue #6 tracks the npmjs release. GitHub Packages requires a scope, but npmjs
-also accepts scoped packages, so no rename is needed. When an npm account is
-available, add a separate manual or tag-driven publish step with
-`npm publish --registry https://registry.npmjs.org --access public` (do not
-change `publishConfig.registry` blindly; override the registry explicitly).
-npm provenance is only available on npmjs.
+```bash
+npm view @gythialy/dsh-sensitive-guard version dist.tarball --registry https://registry.npmjs.org
+npm audit signatures --registry https://registry.npmjs.org
+```
 
-## 7. Failure and rollback
+## 6. Failure and rollback
 
-| Failure                                         | Action                                                                            |
-| ----------------------------------------------- | --------------------------------------------------------------------------------- |
-| Before tag                                      | fix and re-run `pnpm verify`; no release exists                                   |
-| Tag pushed, workflow failed before publish      | fix, delete/recreate the tag, retry                                               |
-| GitHub Packages published, release asset failed | rerun the job or create the release manually; do not republish the same version   |
-| Broken version already published                | publish a patch version; use `npm deprecate` for GitHub Packages where applicable |
-| Leaked token                                    | revoke it immediately and update the workflow/secret                              |
+| Failure                                   | Action                                                          |
+| ----------------------------------------- | --------------------------------------------------------------- |
+| Draft release has a bad tag or version    | edit the draft/tag before publishing                            |
+| Workflow fails before any publication     | fix, delete the release/tag, publish a new release              |
+| GitHub Packages published, assets missing | rerun the job; do not republish the same version                |
+| Only npmjs failed                         | fix `NPM_TOKEN`, bump the patch version, publish a new release  |
+| Broken version already published          | publish a patch version; deprecate the old one                  |
+| Leaked token                              | revoke it, update the secret, publish a patch version if needed |
 
-Never reuse a published version number.
+Never reuse a published version number, and never re-run a workflow that
+already published to one registry without checking the other.
 
 ## References
 
 - `.github/workflows/release.yml`
 - [#7](https://github.com/gythialy/dsh-sensitive-guard/issues/7) — first dual-channel release
-- [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6) — future npmjs release
+- [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6) — npmjs tracking
 - `CONTRIBUTING.md`
