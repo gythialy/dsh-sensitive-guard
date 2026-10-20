@@ -148,7 +148,11 @@ URLs in `url`/`uri`/`endpoint` arguments and in shell commands are inspected.
   random bytes, created atomically with mode `0600`; its directory is `0700`.
   If unavailable, a process-only key is used (placeholders are then not stable
   across restarts).
-- `restore`: reserved; currently unsupported. Secrets are never reversible.
+- `restore`: opt-in process-memory restore map for PII. When true,
+  `/guard restore <placeholder> <file>` writes the original value to a new
+  `0600` file (refusing to overwrite, never echoing it). Only placeholders
+  minted after the option was enabled in this process can be resolved; the map
+  is not persisted, and secrets remain irreversible.
 
 ### `limits`
 

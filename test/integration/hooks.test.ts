@@ -24,7 +24,9 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
-  await rm(dir, { recursive: true, force: true })
+  // Audit/spill writers can settle a file between rmdir and unlink; retry the
+  // directory removal instead of turning a teardown race into a CI failure.
+  await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
 })
 
 function config(overrides: Partial<GuardConfig> = {}): GuardConfig {
@@ -101,6 +103,11 @@ async function readAudit(): Promise<Array<Record<string, unknown>>> {
 }
 
 describe('hook integration', () => {
+  it('registers the /guard command when the command service is present', () => {
+    const fake = start()
+    expect(fake.commands.map((command) => command.name)).toContain('guard')
+  })
+
   it('redacts user messages before the step commits them', async () => {
     const fake = start()
     const listener = fake.listener('agent/pre-step')

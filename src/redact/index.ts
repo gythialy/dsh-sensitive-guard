@@ -56,7 +56,7 @@ export function createRedactor(options: RedactorOptions): Redactor {
 
   const getPseudonymizer = (): Pseudonymizer => {
     if (pseudonymizer !== undefined) return pseudonymizer
-    pseudonymizer = createPseudonymizer({ keyPath, logger })
+    pseudonymizer = createPseudonymizer({ keyPath, logger, record: options.config.pii.restore })
     return pseudonymizer
   }
 

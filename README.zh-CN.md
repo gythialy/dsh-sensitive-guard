@@ -129,7 +129,13 @@ audit:
 
 项目规则文件位于 `<project>/.dsh/rules.yaml`，格式见 [docs/rules-format.md](docs/rules-format.md)。敏感凭据路径在 enforce 下默认 `deny`；`.env.example` / `.env.sample` / `.env.template` 默认放行。
 
-PII key 文件为 32 字节随机值，权限 `0600`（父目录 `0700`）。不可用时退化为进程内随机 key：仍能脱敏，但跨重启占位符不稳定。密钥永不可逆；`pii.restore` 预留但当前不支持。
+PII key 文件为 32 字节随机值，权限 `0600`（父目录 `0700`）。不可用时退化为进程内随机 key：仍能脱敏，但跨重启占位符不稳定。
+
+### `/guard` 命令
+
+- `/guard status`：模式、等级、规则数、审计与 PII/restore 状态；不含明文或匹配值。
+- `/guard on` / `/guard off`：仅对当前进程切换 `enforce`/`monitor`，不持久化。
+- `/guard restore <placeholder> <file>`：需 `pii.restore: true`；把原始 PII 写入新的 `0600` 文件，拒绝覆盖，绝不回显原值。映射只在内存中，只有开启 restore 后在本进程内生成的占位符可恢复；密钥仍不可逆。
 
 ## 审计
 

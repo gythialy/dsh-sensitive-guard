@@ -425,6 +425,9 @@ export function createEngine(options: EngineOptions): Redactor {
     redactText,
     redactValue,
     redactBlocks,
+    restore(placeholder: string): string | undefined {
+      return options.getPseudonymizer().get(placeholder)
+    },
     ruleCount: SECRET_RULES.length,
   }
 }

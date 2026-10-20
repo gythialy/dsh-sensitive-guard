@@ -3,18 +3,27 @@ import type { Logger } from '../../src/contracts.js'
 
 export type Listener = (...args: unknown[]) => unknown
 
+export interface RegisteredCommand {
+  name: string
+  description: string
+  input?: { hint: string }
+  handler: (invocation: { rawInput: string }) => unknown
+}
+
 export interface FakeContext {
   ctx: Context
   listeners: Map<string, Listener[]>
   warnings: string[]
+  commands: RegisteredCommand[]
   /** First registered listener for an event (tests register one plugin). */
   listener(event: string): Listener
 }
 
-/** Minimal Cordis context: records event listeners with prepend semantics. */
+/** Minimal Cordis context: records listeners, commands, and prepend semantics. */
 export function createFakeContext(): FakeContext {
   const listeners = new Map<string, Listener[]>()
   const warnings: string[] = []
+  const commands: RegisteredCommand[] = []
   const logger: Logger = {
     info() {},
     warn(message) {
@@ -23,8 +32,21 @@ export function createFakeContext(): FakeContext {
     debug() {},
   }
 
+  const commandCtx = {
+    commands: {
+      register(definition: RegisteredCommand) {
+        commands.push(definition)
+        return () => undefined
+      },
+    },
+  }
+
   const ctx = {
     logger,
+    inject(_services: string[], callback: (scope: unknown) => void) {
+      callback(commandCtx)
+      return () => undefined
+    },
     on(event: string, listener: Listener, options?: { prepend?: boolean }) {
       const list = listeners.get(event) ?? []
       if (options?.prepend === true) list.unshift(listener)
@@ -42,6 +64,7 @@ export function createFakeContext(): FakeContext {
     ctx: ctx as unknown as Context,
     listeners,
     warnings,
+    commands,
     listener(event) {
       const found = listeners.get(event)?.[0]
       if (!found) throw new Error('no listener registered for ' + event)

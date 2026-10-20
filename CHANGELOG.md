@@ -21,6 +21,8 @@ All notable changes to this project are documented here. The format follows
 - Hooks: `agent/pre-step`, `tools/pre-execute`, `tools/post-execute` (spill
   short-circuit), `tools/ptc-dispatch-log`, `system-prompt/assemble`.
 - Hash-only JSONL audit with rotation.
+- `/guard status|on|off|restore` commands, with an opt-in memory-only PII restore
+  map that writes a new `0600` file and never echoes the value.
 - Unit and fake-context integration tests.
 
 ### Fixed
@@ -41,8 +43,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Known limitations
 
-- `redact.notify`, `/guard` commands, `pii.restore`, and `bin/scan.mjs` are not
-  implemented yet.
+- `redact.notify` and `bin/scan.mjs` are not implemented yet.
 - No end-to-end mock-provider test and no process-level HTTP proxy.
 
 ## [0.0.0] - 2026-10-19
