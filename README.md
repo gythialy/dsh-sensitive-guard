@@ -162,6 +162,22 @@ PII key file: 32 random bytes, created with mode `0600` (parent `0700`). If it i
 - `/guard on` / `/guard off` — switch `enforce`/`monitor` for this process only; not persisted.
 - `/guard restore <placeholder> <file>` — requires `pii.restore: true`; writes the original PII to a new `0600` file, refuses to overwrite, and never echoes the value. The restore map is memory-only, so only placeholders minted in this process after enabling restore can be resolved. Secrets remain irreversible.
 
+## Scan
+
+The package ships a standalone scanner that reuses the same rule table and
+prints only categories, relative paths, counts, and line numbers:
+
+```bash
+pnpm build
+node bin/scan.mjs --staged          # staged files in the current repository
+node bin/scan.mjs src test          # explicit paths
+node bin/scan.mjs --json --no-exit-code .
+```
+
+Exit codes: `0` clean, `1` findings, `2` usage/IO error. Files larger than
+`--max-bytes` (default 8 MiB) and binary files are skipped. Matched values are
+never printed.
+
 ## Audit
 
 ```json

@@ -23,8 +23,12 @@
     "type": "git",
     "url": "git+https://github.com/gythialy/dsh-sensitive-guard.git"
   },
+  "bin": {
+    "sensitive-guard-scan": "./bin/scan.mjs"
+  },
   "files": [
     "lib",
+    "bin",
     "locale",
     "icon.svg",
     "cordis.patch.yml",
@@ -66,6 +70,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "scan": "node bin/scan.mjs",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm publint",
     "pack:check": "pnpm pack --dry-run",
     "prepublishOnly": "pnpm verify"

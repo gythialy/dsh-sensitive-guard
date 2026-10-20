@@ -24,6 +24,8 @@ All notable changes to this project are documented here. The format follows
 - `/guard status|on|off|restore` commands, with an opt-in memory-only PII restore
   map that writes a new `0600` file and never echoes the value.
 - `redact.notify`: one count-only plugin notice per redacted step.
+- `bin/scan.mjs`: standalone repository/CI scanner with `--json`,
+  `--staged`, `--max-bytes`, binary skipping, and masked output.
 - Unit and fake-context integration tests.
 
 ### Fixed
@@ -44,7 +46,6 @@ All notable changes to this project are documented here. The format follows
 
 ### Known limitations
 
-- `bin/scan.mjs` is not implemented yet.
 - No end-to-end mock-provider test and no process-level HTTP proxy.
 
 ## [0.0.0] - 2026-10-19
