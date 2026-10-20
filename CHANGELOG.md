@@ -6,12 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-20
+
 ### Added
 
 - Repository scaffolding: Apache-2.0 license, third-party notices, CONTRIBUTING,
   SECURITY, issue/PR templates.
 - pnpm + TypeScript build (`src` → `lib`, no bundler), oxlint/oxfmt, Vitest coverage.
-- CI on Node 22/24, CodeQL, Dependabot, tag-driven release workflow.
+- CI on Node 22/24, CodeQL, Dependabot, and a GitHub Release-driven publish workflow.
 - Configuration schema (`schemastery`) with monitor/enforce modes, fail-closed
   evaluation, redaction levels, path/network/PII limits, and audit settings.
 - Policy engine: user YAML rules, generated path policy, vendored high-risk baseline,
