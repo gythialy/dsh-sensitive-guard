@@ -6,8 +6,31 @@
  */
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-agent'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, type ContentBlock } from '@deepseek-ai/dsh-llm'
+import type { RedactionHit } from '../contracts.js'
 import { asBlocks, asContent, recordRedactions, sessionIdOf, type GuardRuntime } from './runtime.js'
+
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    /** Plugin-authored user-role notices that are never treated as user input. */
+    plugin: {
+      kind: 'plugin'
+      plugin: string
+      form?: 'notice'
+      summary?: string
+    }
+  }
+}
+
+/** Count-only notice text; category names and counts are never sensitive. */
+export function noticeText(hits: readonly RedactionHit[]): string {
+  const categories = hits.map((hit) => `${hit.category}×${hit.count}`).join(', ')
+  return `Sensitive Guard redacted ${categories}. Original values were replaced with placeholders.`
+}
+
+function mergeHits(target: Map<string, number>, hits: readonly RedactionHit[]): void {
+  for (const hit of hits) target.set(hit.category, (target.get(hit.category) ?? 0) + hit.count)
+}
 
 export function registerPreStep(ctx: Context, runtime: GuardRuntime): void {
   const { config, redactor } = runtime
@@ -21,16 +44,38 @@ export function registerPreStep(ctx: Context, runtime: GuardRuntime): void {
 
       const session = sessionIdOf(payload.agent)
       let changed = false
+      const totals = new Map<string, number>()
       const messages = decision.messages.map((message) => {
         const result = redactor.redactBlocks(asBlocks(message.content), config.levels.input)
         if (!result.changed) return message
         changed = true
+        mergeHits(totals, result.hits)
         recordRedactions(runtime, 'pre-step', result.hits, { session })
         return { ...message, content: asContent<ContentBlock[]>(result.content) }
       })
 
+      if (!changed) return decision
+
+      let nextMessages = messages
+      if (config.redact.notify) {
+        const hits = [...totals].map(([category, count]) => ({ category, count }))
+        const text = noticeText(hits)
+        nextMessages = [
+          ...messages,
+          createUserMessage({
+            content: [{ type: 'text', text }],
+            source: {
+              kind: 'plugin',
+              plugin: 'sensitive-guard',
+              form: 'notice',
+              summary: text.slice(0, 120),
+            },
+          }),
+        ]
+      }
+
       // Preserve every other field (notably startsRequestSeries) untouched.
-      return changed ? { ...decision, messages } : decision
+      return { ...decision, messages: nextMessages }
     },
     { prepend: true },
   )

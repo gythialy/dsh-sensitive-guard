@@ -136,6 +136,45 @@ describe('hook integration', () => {
     expect(text).not.toContain(EMAIL)
   })
 
+  it('appends one count-only notice when redact.notify is enabled', async () => {
+    const fake = start({
+      redact: {
+        userMessages: true,
+        toolResults: true,
+        systemPrompt: true,
+        ptcLog: true,
+        notify: true,
+      },
+    })
+    const listener = fake.listener('agent/pre-step')
+    const messages = [
+      {
+        id: 'm1',
+        role: 'user',
+        source: { kind: 'user' },
+        content: [{ type: 'text', text: `key=${ANTHROPIC_KEY}` }],
+      },
+    ]
+    const next = vi.fn(async () => ({ kind: 'enter', messages }))
+    const decision = (await listener(
+      { agent: makeAgent(dir), messages, turn: 1, step: 1, signal: new AbortController().signal },
+      next,
+    )) as {
+      messages: Array<{
+        role?: string
+        source?: { kind?: string; plugin?: string }
+        content: Array<{ text?: string }>
+      }>
+    }
+
+    expect(decision.messages).toHaveLength(2)
+    const notice = decision.messages[1]!
+    expect(notice.role).toBe('user')
+    expect(notice.source).toMatchObject({ kind: 'plugin', plugin: 'sensitive-guard' })
+    expect(notice.content[0]?.text).toContain('anthropic-key×1')
+    expect(notice.content[0]?.text).not.toContain(ANTHROPIC_KEY)
+  })
+
   it('denies a credential path in enforce mode without calling next', async () => {
     const fake = start()
     const listener = fake.listener('tools/pre-execute')

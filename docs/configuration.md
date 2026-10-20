@@ -89,13 +89,13 @@ of passing content through. Keep it true.
 
 ### `redact`
 
-| Field          | Default | Hook                      |
-| -------------- | ------- | ------------------------- |
-| `userMessages` | `true`  | `agent/pre-step`          |
-| `toolResults`  | `true`  | `tools/post-execute`      |
-| `systemPrompt` | `true`  | `system-prompt/assemble`  |
-| `ptcLog`       | `true`  | `tools/ptc-dispatch-log`  |
-| `notify`       | `false` | planned count-only notice |
+| Field          | Default | Hook                                                  |
+| -------------- | ------- | ----------------------------------------------------- |
+| `userMessages` | `true`  | `agent/pre-step`                                      |
+| `toolResults`  | `true`  | `tools/post-execute`                                  |
+| `systemPrompt` | `true`  | `system-prompt/assemble`                              |
+| `ptcLog`       | `true`  | `tools/ptc-dispatch-log`                              |
+| `notify`       | `false` | append one count-only plugin notice per redacted step |
 
 Disabling a hook removes that protection. The audit log still works for the
 remaining hooks.

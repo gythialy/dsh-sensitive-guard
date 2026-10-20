@@ -36,6 +36,7 @@
 - **稳定占位符**：密钥 `[SECRET:<category>:<id>]`（不可逆）；PII `[[PII_<TYPE>_<hash8>]]`（跨会话稳定）。
 - **审计**：JSONL，只含规则 id、计数与 hash，不含原文、密钥或完整路径。
 - **先观察**：`mode: monitor` 只审计不拦截。
+- **可选提示**：`redact.notify` 在被脱敏的 step 追加一条仅含计数的消息。
 
 ## 路线图
 

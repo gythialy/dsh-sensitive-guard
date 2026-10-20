@@ -23,6 +23,7 @@ All notable changes to this project are documented here. The format follows
 - Hash-only JSONL audit with rotation.
 - `/guard status|on|off|restore` commands, with an opt-in memory-only PII restore
   map that writes a new `0600` file and never echoes the value.
+- `redact.notify`: one count-only plugin notice per redacted step.
 - Unit and fake-context integration tests.
 
 ### Fixed
@@ -43,7 +44,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Known limitations
 
-- `redact.notify` and `bin/scan.mjs` are not implemented yet.
+- `bin/scan.mjs` is not implemented yet.
 - No end-to-end mock-provider test and no process-level HTTP proxy.
 
 ## [0.0.0] - 2026-10-19
