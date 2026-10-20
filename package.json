@@ -70,7 +70,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "pnpm build && node test/e2e/run.mjs",
+    "test:e2e": "pnpm build && node test/e2e/run.mjs && node test/e2e/egress.mjs",
     "scan": "node bin/scan.mjs",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm publint",
     "pack:check": "pnpm pack --dry-run",
