@@ -903,6 +903,7 @@ dsh plugin --profile web add link:/Users/gythialy/Developer/GitHub/sensitive-gua
 ### 19.5 实现与验证
 
 - **代码**：`src/egress/policy.ts`（host/port 规则与解析）、`server.ts`（CONNECT + 明文 HTTP 转发、upstream 串联、字节计数）、`canary.ts`（回环回显探针）、`index.ts`（挂载、env 校验、计数与快照）；配置 `egress.*`；审计 `phase: "egress"`；命令 `/guard egress [status|canary]`。`apply()` 在 `egress.enabled` 时异步挂载，并把关闭监听的 disposer 交给 cordis；绑定失败即插件挂载失败。
-- **测试**：规则单测；真实 listener 的 CONNECT/明文 HTTP（allow、deny、monitor、unknown-deny、缺端口 authority、端口占用、upstream 串联与 502）；canary 的 ok/denied/refused/timeout；`apply()` 全链路（审计落盘 + 命令输出 + dispose 关监听 + fail-closed 拒载）；真实子进程 `curl -x` 的放行与 403。
+- **测试**：规则单测；真实 listener 的 CONNECT/明文 HTTP（allow、deny、monitor、unknown-deny、缺端口 authority、端口占用、upstream 串联与 502）；canary 的 ok/denied/refused/timeout；`apply()` 全链路（审计落盘 + 命令输出 + dispose 关监听 + fail-closed 拒载）；真实子进程 `curl -x` 的放行与 403；审计报告（窗口、轮转、坏行、YAML 建议）。
+- **e2e**：`test/e2e/egress.mjs` 用临时 `DSH_HOME` 启动 headless profile，把 `http(s)_proxy` 指向守卫，让 mock provider 触发 `bash` 工具，验证主机派生子进程的请求确实经过守卫并写入 `phase: "egress"` 审计；deny 场景验证 `enforced: true` 且目标服务器零请求。监听器 `unref()`，headless 一次性运行结束即可退出。
 - **实测**：macOS / Node 26.12.0。拒绝 CONNECT 时 curl 退出码 7，stderr 为 `CONNECT tunnel failed, response 403`；放行路径正常转发。
 - **未做**：TLS 中间人（D4c 维持否决）、per-child 归因（env 是进程级，仍作后续研究）、系统级透明拦截（D4e）。
