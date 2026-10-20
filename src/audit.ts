@@ -47,9 +47,30 @@ export interface ErrorRecord {
   message: string
 }
 
+/** One egress-guard observation. Host and port only: never a path or body. */
+export interface EgressRecord {
+  event: 'mount' | 'connect' | 'close' | 'deny' | 'canary' | 'error'
+  host?: string
+  port?: number
+  /** Policy decision for this destination. */
+  decision?: 'allow' | 'deny'
+  /** True only when the tunnel was actually refused. */
+  enforced?: boolean
+  mode?: 'monitor' | 'enforce'
+  reason?: string
+  rule?: string
+  scheme?: 'http' | 'https'
+  bytesIn?: number
+  bytesOut?: number
+  durationMs?: number
+  outcome?: 'ok' | 'error' | 'denied' | 'timeout'
+  /** Canary-specific status code (CONNECT reply), never a body. */
+  status?: number
+}
+
 interface JsonlRecord {
   ts: number
-  phase: 'decision' | 'redact' | 'error'
+  phase: 'decision' | 'redact' | 'error' | 'egress'
   [key: string]: unknown
 }
 
@@ -86,6 +107,10 @@ export class AuditLog {
 
   error(record: ErrorRecord): void {
     this.enqueue({ ts: Date.now(), phase: 'error', ...record })
+  }
+
+  egress(record: EgressRecord): void {
+    this.enqueue({ ts: Date.now(), phase: 'egress', ...record })
   }
 
   /** Wait until every queued record has settled; safe to call from tests. */

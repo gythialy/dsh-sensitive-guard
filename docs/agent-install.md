@@ -73,6 +73,20 @@ Profile override: `~/.dsh/profiles/<profile>/cordis.patch.yml`
 Restart again after changing the patch. Do not weaken credential-path denial or
 disable audit unless the user asks.
 
+### Optional egress guard
+
+Only when the user explicitly asks for destination-level egress control. This is
+a two-part setup because the proxy value is a launch-time snapshot:
+
+1. In `$DSH_HOME/.env`, add `https_proxy=http://127.0.0.1:41999`.
+2. In the profile patch, set `egress: { enabled: true, port: 41999 }`.
+3. Restart, then run `/guard egress canary`. A failing canary means the wiring is
+   wrong — report the exact result instead of claiming coverage.
+
+The default `egress.unknown: allow` (allow-with-audit) purposefully does not
+block unknown destinations. Do not switch to `unknown: deny` or invent an
+`allow` list on the user's behalf without an explicit host list from them.
+
 ## 6. Rollback
 
 ```bash

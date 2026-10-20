@@ -5,6 +5,7 @@
  * @module dsh-sensitive-guard/config
  */
 import Schema from '@deepseek-ai/schemastery'
+import { DEFAULT_EGRESS_DENY } from './egress/policy.js'
 
 /** Files that are examples, not live credentials, and stay readable by default. */
 export const DEFAULT_ALLOW_PATHS = [
@@ -69,6 +70,31 @@ export const Config = Schema.object({
     enabled: Schema.boolean().default(true),
     /** Decision for outbound URLs with credential-like query parameters. */
     default: Schema.union(['ask', 'deny', 'allow'] as const).default('ask'),
+  }),
+  egress: Schema.object({
+    /**
+     * Bind the loopback CONNECT guard. Off by default: the seam it fills is
+     * DSH's launch-time `HTTPS_PROXY`, so enabling it without wiring the
+     * environment variable protects nothing (see `/guard egress status`).
+     */
+    enabled: Schema.boolean().default(false),
+    /** Fixed loopback port; the launch environment must name this exact port. */
+    port: Schema.natural().default(41999),
+    /** Refuse to mount when `enforce` cannot bind the listener. */
+    failClosed: Schema.boolean().default(true),
+    /**
+     * Decision for a destination that matches no rule. `allow` keeps the guard
+     * auditable and quiet (default); `deny` turns the lists into an allowlist.
+     */
+    unknown: Schema.union(['allow', 'deny'] as const).default('allow'),
+    /** Allowed `host` or `host:port` entries; globs are accepted in the host. */
+    allow: Schema.array(Schema.string()).default([]),
+    /** Denied `host` or `host:port` entries; evaluated before `allow`. */
+    deny: Schema.array(Schema.string()).default([...DEFAULT_EGRESS_DENY]),
+    /** Optional upstream proxy to chain CONNECT tunnels through. */
+    upstream: Schema.string().default(''),
+    /** Probe the listener at mount and record the result in the audit log. */
+    canary: Schema.boolean().default(true),
   }),
   pii: Schema.object({
     enabled: Schema.boolean().default(true),

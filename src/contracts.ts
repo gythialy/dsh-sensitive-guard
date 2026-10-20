@@ -11,6 +11,9 @@ export type Level = 'minimal' | 'balanced' | 'aggressive'
 /** One policy decision, independent of the host's richer decision union. */
 export type GuardAction = 'allow' | 'deny' | 'ask'
 
+/** Guard mode: audit only (`monitor`) or enforce decisions (`enforce`). */
+export type GuardMode = 'monitor' | 'enforce'
+
 export type JsonValue =
   | null
   | boolean

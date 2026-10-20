@@ -104,7 +104,7 @@ DSH 当前没有内置的“敏感信息防泄露”能力：
 | D2 | 项目许可证 Apache-2.0 | 兼容 MIT；含专利授权；便于 vendor Apache-2.0 基线 | MIT（含 Apache 代码时义务更绕） |
 | D3 | 只 vendor 规则表/基线，核心逻辑重写 | 规则表稳定、价值高；核心 API 易漂移 | 整体 fork；只学思想不 vendor（重复劳动） |
 | D4 | v1 不做进程级 HTTP 代理 | 实现重、平台相关；先做 URL/命令级规则 | 复用 `permission-rules` 的 `network.ts` |
-| D4b | v2 提供 opt-in 的**目的地址级出站守卫**：本机 CONNECT 代理，复用 DSH 的 `http_proxy` 缝隙 | 覆盖第三方插件/MCP 子进程这类不经过 DSH 钩子的出站；不需要 CA 分发 | 自建进程级 MITM 代理（D4c 否决）；只写文档不提供执行点（无法证明生效） |
+| D4b | v2 提供 opt-in 的**目的地址级出站守卫**：本机 CONNECT 代理，复用 DSH 的 `http_proxy` 缝隙（**已实现，默认关闭**，见 §6.6.1 与 §19.5） | 覆盖第三方插件/MCP 子进程这类不经过 DSH 钩子的出站；不需要 CA 分发 | 自建进程级 MITM 代理（D4c 否决）；只写文档不提供执行点（无法证明生效） |
 | D4c | 不做 TLS 中间人、不生成/安装 CA | 成本在分发不在代码：必须在启动前就绪的 `NODE_EXTRA_CA_CERTS`、钥匙串管理员授权、JVM/rustls/静态 Go/容器绕过；且守卫会变成凭据持有者 | 生成并安装 CA（macOS/Linux/Windows 全平台信任库） |
 | D4d | 不在插件内 patch `fetch` / 包装全局 dispatcher | 实测 `web_fetch` 两个分支都绕过包装（未代理时自 pin `Agent`，代理时用安装时捕获的 dispatcher）；DSH disposer 会还原 dispatcher；undici 槽位非契约 | monkey-patch `globalThis.fetch`（假安全：恰漏掉模型自选目标那条路径） |
 | D4e | 不做透明/系统级拦截（pf、NetworkExtension、WFP） | 需要 root/管理员与签名扩展，原生客户端仍可绕过，超出插件边界 | 系统级透明代理（另立项目，需 OS 级隔离评估） |
@@ -395,14 +395,18 @@ vendor 自 `dsh-permission-rules` 的 `rules/builtin-high-risk.yaml`（Apache-2.
 - 查询参数名命中 `token|key|secret|password|sig|auth` → `ask`。
 - **不做**进程级代理（v1）；v2 的决策见下。
 
-#### 6.6.1 v2 出站守卫（目的地址级，计划）
+#### 6.6.1 v2 出站守卫（目的地址级，已实现，默认关闭）
 
-- **机制**：插件在 `127.0.0.1:<egress.port>` 起一个 CONNECT 代理；用户在 `$DSH_HOME/.env`（或 shell）里设置 `HTTPS_PROXY=http://127.0.0.1:<port>`，由 DSH 启动器在**插件加载前**装成进程级 dispatcher，并下发给子进程（`@deepseek-ai/dsh-http-proxy`）。
-- **可见性**：HTTPS 只有 `host:port`（无路径/头/正文，不需要 CA）；明文 HTTP 可见完整请求；SNI 需解析 ClientHello，默认不依赖。
-- **策略**：`host[:port]` 的 allow/deny；默认 `monitor`；`enforce` 必须同时 `failClosed: true`（监听未绑定则拒绝挂载）。
-- **审计**：只记 host/port/decision/bytes，不记正文与请求头。
-- **失败语义**：代理值不可用 → DSH 报告后**直连**（fail-open）。因此守卫必须提供 doctor，证明"环境变量确实指向本进程"，否则不得宣称 enforce。
-- **已知盲区**（必须写进用户文档）：DSH 对 loopback 强制直连；telemetry 走 `node:http`、不认代理；PTC/workflow worker 按设计不下发代理；Node 22.19/22.20 子进程直连；JVM、rustls（`webpki-roots`）、静态 Go、容器不认 env；SSH/22、原始套接字、HTTP/3 不在范围内。
+- **机制**：插件在 `127.0.0.1:<egress.port>`（默认 41999）起一个 `node:http` 监听，同时处理 CONNECT 隧道与明文 HTTP 转发；用户在 `$DSH_HOME/.env`（或 shell）里设置 `https_proxy=http://127.0.0.1:<port>`，由 DSH 启动器在**插件加载前**装成进程级 dispatcher，并下发给子进程（`@deepseek-ai/dsh-http-proxy`）。守卫不改造该缝隙，只做它的**端点**。
+- **可见性**：HTTPS 只有 `host:port`（不解析 SNI、不需要 CA）；明文 HTTP 可见请求行/头/正文，但审计只记 host/port/decision/bytes。
+- **策略**：`egress.allow` / `egress.deny`（`host`、`host:port`，host 位置支持 glob；IPv6 必须加括号；`deny` 优先）；未命中按 `egress.unknown`，默认 `allow`（allow-with-audit，先收集 deny 清单）。
+- **模式**：`monitor` 一律放行、只审计；`enforce` 只拒绝命中 deny 的目标（`unknown: deny` 时才是白名单）。
+- **挂载**：端口写死（env 是启动快照），绑定失败在 `failClosed: true` 时让插件挂载失败，不静默降级；`upstream` 可串联企业代理。
+- **审计**：`phase: "egress"`，事件 `mount`/`connect`/`close`/`deny`/`canary`/`error`，只记 host/port/decision/rule id/bytes/duration。
+- **拒绝语义**：CONNECT 返回 `403` + `X-Guard-Reason`（`denied-by-rule`、`unknown-destination-blocked`、`invalid-target`、`upstream-failure`），调用侧呈现为 `fetch failed`；不做交互式 `ask`（隧道没有会话上下文，挂起握手等于卡死）。
+- **doctor**：`/guard egress status` 报告监听、`https_proxy` 是否指向本进程、规则数、隧道/拦截/字节计数与最近目标；`/guard egress canary` 用回环回显探针证明隧道可用；挂载时自动跑一次并写审计。
+- **失败语义**：代用量不正确时 DSH **fail-open**（报告后直连），所以守卫不宣称 enforce，只把"env 未接线"如实写进 status、启动告警与审计。
+- **已知盲区**（必须写进用户文档）：DSH 对 loopback 强制直连；telemetry 走 `node:http`、不认代理；PTC/workflow worker 按设计不下发代理；Node 22.19/22.20 子进程直连；JVM、rustls（`webpki-roots`）、静态 Go、容器不认 env；SSH/22、原始套接字、HTTP/3 不在范围内。守卫不是沙箱。
 
 ### 6.7 dry-run / monitor
 
@@ -889,9 +893,16 @@ dsh plugin --profile web add link:/Users/gythialy/Developer/GitHub/sensitive-gua
 - 归因：env 是进程级的，"哪个子进程"需要 per-spawn 代理用户名，留作后续研究。
 - 守卫只对"配置正确且客户端遵守代理"的场景有效；恶意插件可以直接开 socket，这不是沙箱（与 §1.3 的边界一致）。
 
-### 19.4 未决问题
+### 19.4 未决问题（已决）
 
-1. `enforce` 下未知主机默认 deny-all，还是 allow-with-audit？
-2. 端口写死在 config，还是挂载时写端口文件（与启动快照冲突，倾向写死）。
-3. 审计字段是否够用（host/port/decision/bytes）？
-4. loopback 盲区只在文档声明，还是给工具级规则补一条 `127.0.0.1` 说明？
+1. `enforce` 下未知主机：**allow-with-audit**（`egress.unknown: allow`，默认）。理由：先让守卫可观测、低噪音地跑一段，用 `connect` 审计攒出 deny 清单；需要白名单时改 `unknown: deny`。
+2. 端口**写死在 config**（`egress.port`，默认 41999）。env 是启动快照，端口文件会和它竞争；端口被占用时 `failClosed` 让挂载失败，绝不悄悄换端口。
+3. 审计字段够用：host/port/decision/rule/bytes/duration。明文 HTTP **不记** path/query，避免把 URL 里的标识写进日志。
+4. loopback 盲区只在文档声明（`docs/configuration.md` 的 `egress` 节），工具级规则不特殊处理 `127.0.0.1`。
+
+### 19.5 实现与验证
+
+- **代码**：`src/egress/policy.ts`（host/port 规则与解析）、`server.ts`（CONNECT + 明文 HTTP 转发、upstream 串联、字节计数）、`canary.ts`（回环回显探针）、`index.ts`（挂载、env 校验、计数与快照）；配置 `egress.*`；审计 `phase: "egress"`；命令 `/guard egress [status|canary]`。`apply()` 在 `egress.enabled` 时异步挂载，并把关闭监听的 disposer 交给 cordis；绑定失败即插件挂载失败。
+- **测试**：规则单测；真实 listener 的 CONNECT/明文 HTTP（allow、deny、monitor、unknown-deny、缺端口 authority、端口占用、upstream 串联与 502）；canary 的 ok/denied/refused/timeout；`apply()` 全链路（审计落盘 + 命令输出 + dispose 关监听 + fail-closed 拒载）；真实子进程 `curl -x` 的放行与 403。
+- **实测**：macOS / Node 26.12.0。拒绝 CONNECT 时 curl 退出码 7，stderr 为 `CONNECT tunnel failed, response 403`；放行路径正常转发。
+- **未做**：TLS 中间人（D4c 维持否决）、per-child 归因（env 是进程级，仍作后续研究）、系统级透明拦截（D4e）。

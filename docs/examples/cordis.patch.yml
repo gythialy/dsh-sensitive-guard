@@ -15,6 +15,15 @@
     policy:
       rulesFile: .dsh/rules.yaml
       builtin: true
+    # Opt-in egress guard. Requires https_proxy=http://127.0.0.1:41999 in
+    # $DSH_HOME/.env (or the launch environment) before DSH starts.
+    egress:
+      enabled: false
+      port: 41999
+      unknown: allow
+      deny:
+        - '169.254.169.254:80'
+        - 'metadata.google.internal'
     audit:
       enabled: true
       path: ~/.dsh/audit/sensitive-guard.jsonl

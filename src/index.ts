@@ -13,6 +13,7 @@ import { AuditLog } from './audit.js'
 import { registerGuardCommands } from './commands/guard.js'
 import { resolveConfig, type GuardConfig } from './config.js'
 import type { Logger } from './contracts.js'
+import { mountEgress } from './egress/index.js'
 import { registerPostExecute } from './hooks/post-execute.js'
 import { registerPreExecute } from './hooks/pre-execute.js'
 import { registerPreStep } from './hooks/pre-step.js'
@@ -20,7 +21,7 @@ import { registerPtcLog } from './hooks/ptc-log.js'
 import type { GuardRuntime } from './hooks/runtime.js'
 import { registerSystemPrompt } from './hooks/system-prompt.js'
 import { localeFromSettings } from './locale.js'
-import { startupText } from './messages.js'
+import { egressStartupText, startupText } from './messages.js'
 import { createPolicyEngine } from './policy/index.js'
 import { createRedactor } from './redact/index.js'
 import { safeLogger } from './util/logger.js'
@@ -29,6 +30,8 @@ export { Config, resolveConfig, type GuardConfig } from './config.js'
 export type { AuditLog } from './audit.js'
 export { createPolicyEngine } from './policy/index.js'
 export { createRedactor, createPseudonymizer } from './redact/index.js'
+export { mountEgress, proxyEnvMatches, resolveProxyEnv } from './egress/index.js'
+export type { EgressController, EgressSnapshot } from './egress/index.js'
 
 /** Plugin id used by the bundle patch and by owner-scoped diagnostics. */
 export const name = 'sensitive-guard'
@@ -43,7 +46,7 @@ export const inject = ['tools']
  * @param ctx - plugin context; every listener is disposed with it.
  * @param config - validated row config from the bundle patch (or a test).
  */
-export function apply(ctx: Context, config?: GuardConfig): void {
+export function apply(ctx: Context, config?: GuardConfig): void | Promise<() => Promise<void>> {
   const settings = resolveConfig(config)
   const logger = safeLogger(ctx.logger as unknown as Partial<Logger> | undefined)
 
@@ -87,4 +90,22 @@ export function apply(ctx: Context, config?: GuardConfig): void {
       runtime.locale(),
     ),
   )
+
+  if (!settings.egress.enabled) return
+
+  // The listener is opt-in and binds asynchronously. Cordis collects the
+  // returned disposer, so a rejected mount (fail-closed port conflict) fails the
+  // plugin instead of leaving a guard that claims enforcement it cannot deliver.
+  return mountEgress({
+    config: settings.egress,
+    modeOf: () => settings.mode,
+    audit,
+    logger,
+  }).then((controller) => {
+    runtime.egress = controller
+    logger.info(egressStartupText(controller.snapshot(), runtime.locale()))
+    return async () => {
+      await controller.close()
+    }
+  })
 }

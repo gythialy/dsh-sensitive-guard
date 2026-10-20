@@ -9,6 +9,7 @@ import type {
 } from '../contracts.js'
 import type { GuardConfig } from '../config.js'
 import type { AuditLog } from '../audit.js'
+import type { EgressController } from '../egress/index.js'
 import type { GuardLocale } from '../locale.js'
 
 /** Shared, immutable services used by every hook. */
@@ -20,6 +21,8 @@ export interface GuardRuntime {
   logger: Logger
   /** Active DSH language; resolved per prompt so a settings change is live. */
   locale: () => GuardLocale
+  /** Present only when `egress.enabled`; mounted asynchronously at startup. */
+  egress?: EgressController
 }
 
 /** Session id for audit correlation; never the session content. */

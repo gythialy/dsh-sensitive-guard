@@ -129,6 +129,15 @@ paths:
 network:
   enabled: true
   default: ask
+egress: # opt-in destination-level guard; off by default
+  enabled: false
+  port: 41999
+  failClosed: true
+  unknown: allow
+  allow: []
+  deny: ['169.254.169.254:80', 'metadata.google.internal']
+  upstream: ''
+  canary: true
 pii:
   enabled: true
   keyFile: '' # default: $DSH_HOME/sensitive-guard-pii.key
@@ -152,6 +161,32 @@ PII key file: 32 random bytes, created with mode `0600` (parent `0700`). If it i
 - `/guard status` — mode, levels, rule counts, audit state, PII/restore state; no secrets or matched values.
 - `/guard on` / `/guard off` — switch `enforce`/`monitor` for this process only; not persisted.
 - `/guard restore <placeholder> <file>` — requires `pii.restore: true`; writes the original PII to a new `0600` file, refuses to overwrite, and never echoes the value. The restore map is memory-only, so only placeholders minted in this process after enabling restore can be resolved. Secrets remain irreversible.
+- `/guard egress [status|canary]` — opt-in egress guard state: listener, whether `https_proxy` points at it, rule counts, tunnel/blocked/byte counters, recent destinations, and a loopback canary probe.
+
+### Egress guard (opt-in)
+
+v2 adds a destination-level CONNECT guard on DSH's existing `HTTPS_PROXY`
+seam — host and port only, no TLS interception, no CA. It is off by default and
+must be wired from the launch environment:
+
+```bash
+# $DSH_HOME/.env (or exported before launch), then restart DSH
+https_proxy=http://127.0.0.1:41999
+```
+
+```yaml
+egress:
+  enabled: true
+  port: 41999
+  unknown: allow # allow-with-audit; use deny for an allowlist
+  deny: ['169.254.169.254:80', 'metadata.google.internal', 'upload.example.com:443']
+```
+
+Coverage is honest, not universal: loopback is always bypassed by DSH,
+telemetry and PTC/workflow workers stay direct, and JVMs, rustls, static Go,
+containers, SSH, and HTTP/3 ignore or bypass proxy variables. A refused tunnel
+returns `403` with `X-Guard-Reason`. See
+[docs/configuration.md](docs/configuration.md#egress) for the full contract.
 
 Approval prompts name the tool, a short risk category (for example `high-risk command` or `sensitive path`), and a redacted action summary; secrets are replaced and URL credentials are masked. Deny reasons state the block and one safe next step. `/guard status` prints a labeled block instead of `key=value` lines. Guard messages follow the DSH language setting (`en` / `zh`); an absent setting falls back to the process locale, then English.
 
@@ -185,7 +220,7 @@ The directory is `0700`, the file `0600`, and rotation keeps five `.1`–`.5` fi
 - The guard cannot rewrite DSH's `agent/inbox/spliced` receipt or assistant output; both are documented gaps.
 - Session logs written before installation are not rewritten.
 - Secrets in tool **arguments** are blocked, not rewritten: the host logs arguments before `tools/pre-execute`.
-- No process-level HTTP/CONNECT proxy in v1. v2 plans a destination-level egress guard that reuses DSH's `HTTPS_PROXY` seam (host-level only, no CA); see [issue #5](https://github.com/gythialy/dsh-sensitive-guard/issues/5) and the design note in [docs/sensitive-guard-integration.md](docs/sensitive-guard-integration.md). No OCR, no image redaction.
+- The egress guard is opt-in and destination-level: it only covers clients that honour `https_proxy`, and only `host:port` is visible for HTTPS. Loopback, telemetry, PTC/workflow workers, JVMs, rustls, static Go, containers, SSH, and raw sockets bypass it; there is no CA and no TLS interception. See [docs/configuration.md](docs/configuration.md#egress) and the design note in [docs/sensitive-guard-integration.md](docs/sensitive-guard-integration.md). No OCR, no image redaction.
 - Redaction is privacy-first; a false positive can remove benign text. Start in `monitor` and review.
 
 ## Development

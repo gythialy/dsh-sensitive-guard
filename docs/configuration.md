@@ -48,6 +48,18 @@ network:
   enabled: true
   default: ask
 
+egress:
+  enabled: false
+  port: 41999
+  failClosed: true
+  unknown: allow
+  allow: []
+  deny:
+    - '169.254.169.254:80'
+    - 'metadata.google.internal'
+  upstream: ''
+  canary: true
+
 pii:
   enabled: true
   keyFile: ''
@@ -139,7 +151,68 @@ URLs in `url`/`uri`/`endpoint` arguments and in shell commands are inspected.
 - URL userinfo (`scheme://user:pass@host`) is denied.
 - Query parameter names matching
   `token|key|secret|password|passwd|sig|signature|auth` use `network.default`.
-- `enabled: false` disables these checks. No process-level proxy is used.
+- `enabled: false` disables these checks. These URL heuristics are separate
+  from the opt-in `egress` listener below.
+
+### `egress`
+
+Opt-in destination-level egress guard (ADR D4b). Off by default; it fills the
+`HTTPS_PROXY` seam DSH's launcher already installs before any plugin loads, so
+enabling it without wiring the environment protects nothing.
+
+- `enabled`: bind a loopback CONNECT + plain-HTTP forward proxy on
+  `127.0.0.1:<port>`. Never a wildcard address.
+- `port` (default `41999`): fixed, because DSH resolves the proxy environment
+  once at launch. A taken port fails the mount instead of silently moving.
+- `failClosed` (default `true`): when the listener cannot bind, plugin mount
+  fails. Set it to `false` only if you accept running without egress coverage.
+- `unknown` (default `allow`): decision for a destination that matches no entry.
+  `allow` keeps the guard quiet and auditable while you collect a deny list;
+  `deny` turns `allow` into an allowlist.
+- `allow` / `deny`: entries are `host`, `host:port`, or a glob in the host
+  position (`*.example.com`). IPv6 must be bracketed (`[::1]:443`); an
+  unbracketed address is dropped because it is ambiguous with `host:port`.
+  `deny` is evaluated before `allow`, and an unparseable entry is dropped rather
+  than matched loosely.
+- `upstream`: optional `http://host:port` to chain CONNECT tunnels through (for
+  a corporate proxy).
+- `canary`: probe the listener once at mount and record the result.
+
+Wire it from the launch environment, then restart DSH:
+
+```bash
+# $DSH_HOME/.env, or exported before launch
+https_proxy=http://127.0.0.1:41999
+# optional: only clients that speak plain HTTP
+http_proxy=http://127.0.0.1:41999
+```
+
+Verify with `/guard egress status` (does the live value point at this listener?)
+and `/guard egress canary` (does a real CONNECT tunnel echo?). A canary "denied"
+result usually means `127.0.0.1` is in your `deny` list.
+
+What the guard sees: HTTPS shows `host:port` only (a CONNECT tunnel; no SNI
+parsing, no CA); plain HTTP shows the request line, headers, and body, but the
+audit log records only host, port, decision, rule, bytes, and duration. A
+refused tunnel returns `403` with `X-Guard-Reason` —
+`denied-by-rule`, `unknown-destination-blocked`, `invalid-target`, or
+`upstream-failure` — and `X-Guard-Rule` when a rule matched. There is no
+interactive `ask`: a tunnel has no session context, and a held handshake is a
+hang.
+
+Known blind spots — by design, not bugs:
+
+- DSH always bypasses loopback, so a plugin posting to a local collector is not
+  covered.
+- Telemetry posts through `node:http` and ignores the proxy environment.
+- PTC runtimes and workflow workers receive no proxy settings.
+- Node 22.19/22.20 children honour `NODE_USE_ENV_PROXY` only from 22.21/24.
+- JVMs, rustls (`webpki-roots`), static Go, and containers carry their own trust
+  or proxy handling; SSH, raw sockets, and HTTP/3 are outside any HTTP proxy.
+- No TLS interception and no CA (ADR D4c fixed for v2): HTTPS paths and bodies
+  stay invisible at this layer. Body-aware policy remains in the tool pipeline,
+  where the content is already plaintext.
+- The guard is not a sandbox: a plugin can open a socket directly.
 
 ### `pii`
 

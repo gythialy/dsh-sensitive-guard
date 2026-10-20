@@ -11,6 +11,10 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { CommandResult } from '@deepseek-ai/dsh-commands'
 import type { GuardRuntime } from '../hooks/runtime.js'
 import {
+  egressCanaryText,
+  egressDisabledText,
+  egressStatusText,
+  egressUnavailableText,
   modeText,
   restoreDisabledText,
   restoreExistsText,
@@ -52,10 +56,44 @@ function status(runtime: GuardRuntime): CommandResult {
         auditPath: config.audit.path,
         piiEnabled: config.pii.enabled,
         piiRestore: config.pii.restore,
+        ...(config.egress.enabled && runtime.egress !== undefined
+          ? {
+              egress: {
+                bound: runtime.egress.bound,
+                port: runtime.egress.port,
+                mode: config.mode,
+                envMatches: runtime.egress.snapshot().envMatches,
+              },
+            }
+          : {}),
       },
       runtime.locale(),
     ),
   }
+}
+
+/** `/guard egress [status|canary]`: count-only view plus a loopback probe. */
+async function egressCommand(
+  runtime: GuardRuntime,
+  tokens: readonly string[],
+): Promise<CommandResult> {
+  const locale = runtime.locale()
+  if (!runtime.config.egress.enabled) return { kind: 'error', text: egressDisabledText(locale) }
+  const controller = runtime.egress
+  if (controller === undefined) return { kind: 'error', text: egressUnavailableText(locale) }
+
+  const verb = tokens[1] ?? 'status'
+  if (verb === 'status') {
+    return { kind: 'success', text: egressStatusText(controller.snapshot(), locale) }
+  }
+  if (verb === 'canary') {
+    const result = await controller.canary()
+    return {
+      kind: result.ok ? 'success' : 'error',
+      text: egressCanaryText(result, controller.port, locale),
+    }
+  }
+  return { kind: 'error', text: unknownCommandText('egress ' + verb, locale) }
 }
 
 function setMode(runtime: GuardRuntime, enabled: boolean): CommandResult {
@@ -85,6 +123,7 @@ export async function runGuardCommand(
   if (verb === 'status') return status(runtime)
   if (verb === 'on') return setMode(runtime, true)
   if (verb === 'off') return setMode(runtime, false)
+  if (verb === 'egress') return egressCommand(runtime, tokens)
 
   if (verb !== 'restore') {
     return { kind: 'error', text: unknownCommandText(verb, runtime.locale()) }
@@ -134,7 +173,7 @@ export function registerGuardCommands(ctx: Context, runtime: GuardRuntime): void
     commandCtx.commands.register({
       name: 'guard',
       description: 'Sensitive Guard status, runtime mode, and PII restore',
-      input: { hint: '[status|on|off|restore <placeholder> <file>]' },
+      input: { hint: '[status|on|off|egress [status|canary]|restore <placeholder> <file>]' },
       handler: ({ rawInput }) => runGuardCommand(runtime, rawInput),
     })
   })
