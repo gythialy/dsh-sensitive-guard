@@ -48,15 +48,15 @@ jobs:
           echo "token length: ${#NODE_AUTH_TOKEN}"
           npm whoami --registry https://registry.npmjs.org
 
-      - name: Report target package names
+      - name: Report npmjs publication state
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           for name in @r0cky20/dsh-sensitive-guard @gythialy/dsh-sensitive-guard; do
-            if npm view "${name}" version --registry https://registry.npmjs.org >/dev/null 2>&1; then
-              echo "${name}: already published on npmjs"
+            if version="$(npm view "${name}" version --registry https://registry.npmjs.org 2>/dev/null)"; then
+              echo "${name}: published on npmjs (${version})"
             else
-              echo "${name}: not published on npmjs (expected before the first release)"
+              echo "${name}: not published on npmjs"
             fi
           done

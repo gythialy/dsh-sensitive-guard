@@ -20,14 +20,25 @@ dsh --version
 
 ## 2. Install with one command
 
+Preferred: the public npm registry (anonymous, no token):
+
+```bash
+PROFILE="${DSH_PROFILE:-web}"
+dsh plugin --profile "$PROFILE" add @r0cky20/dsh-sensitive-guard
+```
+
+Fallback when the user wants a pinned artifact or npm is unreachable — the
+**GitHub Release tarball**:
+
 ```bash
 PROFILE="${DSH_PROFILE:-web}"
 dsh plugin --profile "$PROFILE" add \
   https://github.com/gythialy/dsh-sensitive-guard/releases/latest/download/dsh-sensitive-guard.tgz
 ```
 
-Use the **GitHub Release tarball**. Do not install from GitHub Packages and do
-not ask the user for a registry token.
+Do not install from GitHub Packages (`@gythialy/dsh-sensitive-guard`): that
+registry needs GitHub auth. Never ask the user for a registry token; both public
+channels above are anonymous.
 
 Expected result: the command reports the package as added and exits 0. The
 plugin's `cordis.patch.yml` mounts the `sensitive-guard` row automatically.
@@ -107,8 +118,8 @@ Then ask the user to restart.
 - If a command fails, report the exact stderr and stop; do not retry with a
   different registry or elevated permissions.
 - The Release tarball is stable at `releases/latest/download/dsh-sensitive-guard.tgz`;
-  pin a version with `releases/download/v0.1.0/dsh-sensitive-guard.tgz` only if
-  the user asks for a fixed version.
+  pin a version with `releases/download/v<version>/dsh-sensitive-guard.tgz` only
+  if the user asks for a fixed version.
 
 ## One-line prompt for the user
 

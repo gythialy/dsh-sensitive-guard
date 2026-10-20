@@ -52,15 +52,27 @@ the issue list is the single source of truth.
 
 ## Install
 
+### From npm
+
+Published to npmjs from v0.2.0 (anonymous, no token):
+
+```bash
+dsh plugin --profile web add @r0cky20/dsh-sensitive-guard
+```
+
 ### From GitHub Release
 
-Verify the download against the `SHA256SUMS` asset from the same release, then
-install:
+For a pinned or checksum-verified artifact: verify the download against the
+`SHA256SUMS` asset from the same release, then install:
 
 ```bash
 dsh plugin --profile web add \
   https://github.com/gythialy/dsh-sensitive-guard/releases/latest/download/dsh-sensitive-guard.tgz
 ```
+
+Both channels are public. Do not install the `@gythialy/dsh-sensitive-guard`
+mirror from GitHub Packages; that registry needs GitHub auth and is not the
+user-facing path.
 
 ### Agent-assisted install
 
@@ -72,17 +84,6 @@ it this prompt:
 
 The guide covers the single install command, verification, restart, optional
 `enforce` configuration, and rollback.
-
-### From npm
-
-Published to npmjs from v0.2.0:
-
-```bash
-dsh plugin --profile web add @r0cky20/dsh-sensitive-guard
-```
-
-Do not install the `@gythialy/dsh-sensitive-guard` mirror from GitHub Packages;
-that registry needs GitHub auth and is not the user-facing path.
 
 ### From source (development)
 

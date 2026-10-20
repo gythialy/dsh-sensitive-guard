@@ -52,14 +52,25 @@ issue 列表是唯一来源。
 
 ## 安装
 
+### 从 npm 安装
+
+从 v0.2.0 起发布到 npmjs（匿名、无需 token）：
+
+```bash
+dsh plugin --profile web add @r0cky20/dsh-sensitive-guard
+```
+
 ### 从 GitHub Release 安装
 
-先用同一 release 的 `SHA256SUMS` 校验下载文件，然后：
+需要固定版本或校验产物时：先用同一 release 的 `SHA256SUMS` 校验下载文件，然后：
 
 ```bash
 dsh plugin --profile web add \
   https://github.com/gythialy/dsh-sensitive-guard/releases/latest/download/dsh-sensitive-guard.tgz
 ```
+
+两个渠道都是公开的。不要从 GitHub Packages 安装 `@gythialy/dsh-sensitive-guard`
+镜像，那个 registry 需要 GitHub 认证，不是面向用户的路径。
 
 ### 交给 agent 安装
 
@@ -69,16 +80,6 @@ dsh plugin --profile web add \
 > https://github.com/gythialy/dsh-sensitive-guard/blob/main/docs/agent-install.md
 
 指南包含一条安装命令、挂载验证、重启、可选的 `enforce` 配置与回滚。
-
-### 从 npm 安装
-
-从 v0.2.0 起发布到 npmjs：
-
-```bash
-dsh plugin --profile web add @r0cky20/dsh-sensitive-guard
-```
-
-不要从 GitHub Packages 安装 `@gythialy/dsh-sensitive-guard` 镜像，那个 registry 需要 GitHub 认证，不是面向用户的路径。
 
 ### 从源码安装（开发期）
 

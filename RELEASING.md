@@ -18,12 +18,22 @@ its name as canonical. Renaming the plugin from the pre-0.2 `@gythialy` name
 means an existing profile must remove the old plugin id before adding the new
 one.
 
+## 0. Prerequisites
+
+- Repository secret `NPM_TOKEN`: a **granular** token owned by the npm account that
+  owns the canonical scope, with `Read and write (publish and stage)` and
+  **`Bypass two-factor authentication` checked**. Without the bypass, `npm whoami`
+  still succeeds but `npm publish` fails in CI with `EOTP` (the run happened, the
+  package was never published).
+- Run the `npm token check` workflow first; it authenticates with the secret and
+  reports whether either candidate name is already on npmjs.
+
 ## 1. Prepare the release commit
 
 ```bash
 pnpm install
-pnpm version 0.1.0 --no-git-tag-version
-# move CHANGELOG [Unreleased] items into [0.1.0] - YYYY-MM-DD
+pnpm version <version> --no-git-tag-version
+# move CHANGELOG [Unreleased] items into [<version>] - YYYY-MM-DD
 pnpm verify
 pnpm test:e2e
 pnpm pack --dry-run
@@ -41,7 +51,7 @@ python3 -m http.server 18765 --directory .tmp >/tmp/sg-http.log 2>&1 &
 SERVER=$!
 sleep 1
 DSH_HOME="$TMP_HOME" dsh plugin --profile web add \
-  http://127.0.0.1:18765/r0cky20-dsh-sensitive-guard-0.1.0.tgz
+  http://127.0.0.1:18765/r0cky20-dsh-sensitive-guard-<version>.tgz
 DSH_HOME="$TMP_HOME" dsh --profile web --dump-config | grep -A3 sensitive-guard
 kill "$SERVER"
 rm -rf "$TMP_HOME" .tmp/*.tgz
@@ -55,13 +65,13 @@ The scoped package must appear in `dsh.profile.bundles` and the
 Draft first, review the notes, then publish:
 
 ```bash
-gh release create v0.1.0 --draft \
-  --title "v0.1.0" \
+gh release create v<version> --draft \
+  --title "v<version>" \
   --notes-file .tmp/release-notes.md
 ```
 
 Or use the GitHub UI: **Releases → Draft a new release**, choose/create the
-`v0.1.0` tag, review, then **Publish release**.
+`v<version>` tag, review, then **Publish release**.
 
 Publishing emits `release: published` and runs
 `.github/workflows/release.yml`:
@@ -77,8 +87,13 @@ Publishing emits `release: published` and runs
 6. pack `dsh-sensitive-guard.tgz` and `SHA256SUMS`;
 7. upload both assets to the already-published release.
 
-A missing `NPM_TOKEN` is not an error: the npmjs step logs a warning and skips.
-No repository secret is needed for GitHub Packages.
+A missing or broken `NPM_TOKEN` does not fail the job: the npmjs step logs a
+warning and skips, so the release then reaches GitHub Packages only. Read the log
+instead of assuming npmjs was published. No repository secret is needed for
+GitHub Packages.
+
+Re-running a failed release run is safe **only** when nothing reached either
+registry; the log prints one `+ <name>@<version>` line per successful publish.
 
 ## 4. Verify
 
@@ -87,7 +102,7 @@ No repository secret is needed for GitHub Packages.
 ```bash
 TMP_HOME="$(mktemp -d)"
 DSH_HOME="$TMP_HOME" dsh plugin --profile web add \
-  https://github.com/gythialy/dsh-sensitive-guard/releases/download/v0.1.0/dsh-sensitive-guard.tgz
+  https://github.com/gythialy/dsh-sensitive-guard/releases/download/v<version>/dsh-sensitive-guard.tgz
 DSH_HOME="$TMP_HOME" dsh --profile web --dump-config | grep -A3 sensitive-guard
 rm -rf "$TMP_HOME"
 ```
@@ -95,8 +110,8 @@ rm -rf "$TMP_HOME"
 Checksums:
 
 ```bash
-curl -LO https://github.com/gythialy/dsh-sensitive-guard/releases/download/v0.1.0/SHA256SUMS
-curl -LO https://github.com/gythialy/dsh-sensitive-guard/releases/download/v0.1.0/dsh-sensitive-guard.tgz
+curl -LO https://github.com/gythialy/dsh-sensitive-guard/releases/download/v<version>/SHA256SUMS
+curl -LO https://github.com/gythialy/dsh-sensitive-guard/releases/download/v<version>/dsh-sensitive-guard.tgz
 shasum -a 256 -c SHA256SUMS   # macOS; use sha256sum -c on Linux
 ```
 
