@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-20
+
 ### Added
 
 - Opt-in destination-level egress guard (ADR D4b, design §6.6.1/§19.5): a
@@ -38,6 +40,15 @@ All notable changes to this project are documented here. The format follows
   the refusal and that the origin receives nothing. The listener no longer keeps
   a one-shot headless process alive.
 
+### Changed
+
+- Split package identity across the two registries: the canonical name is now
+  `@r0cky20/dsh-sensitive-guard` for the GitHub Release tarball and npmjs, while
+  the GitHub Packages mirror is republished as
+  `@gythialy/dsh-sensitive-guard` because that registry requires the package
+  scope to match the repository owner. A profile installed under the old
+  `@gythialy` name must remove that plugin id before adding the new one.
+
 ## [0.1.1] - 2026-10-20
 
 ### Added
@@ -51,12 +62,6 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
-- Split package identity across the two registries: the canonical name is now
-  `@r0cky20/dsh-sensitive-guard` for the GitHub Release tarball and npmjs, while
-  the GitHub Packages mirror is republished as
-  `@gythialy/dsh-sensitive-guard` because that registry requires the package
-  scope to match the repository owner. A profile installed under the old
-  `@gythialy` name must remove that plugin id before adding the new one.
 - Refactored every guard-facing message into `src/messages.ts`: approval prompts
   now name the tool, risk category, and a redacted action summary; denial
   reasons add one safe next step; `/guard` uses a labeled status block; and

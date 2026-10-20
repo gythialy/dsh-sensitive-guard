@@ -8,7 +8,7 @@
 
 面向 [DeepSeek Harness](https://github.com/deepseek-ai/dsh) 的 host-only 安全插件：**拦截凭据读取与外发密钥**，并在密钥、令牌与 PII 进入模型、会话日志或 spill 文件前替换为占位符。
 
-> 状态：**0.0.0 预发布**。拦截与脱敏垂直切片已实现并有测试；计划中的工作统一由 GitHub Issues 跟踪（见[路线图](#路线图)），尚未实现的能力请勿当作可用功能。
+> 状态：**0.2.0**。拦截、脱敏与可选出站守卫三层均已实现并有测试；剩余工作统一由 GitHub Issues 跟踪（见[路线图](#路线图)），尚未实现的能力请勿当作可用功能。
 
 ## 覆盖范围
 
@@ -25,7 +25,7 @@
 | 9   | 第三方插件 / MCP 内部           | ❌ 不在 DSH 工具管线内                                                    |
 | 10  | 模型 provider 留存              | ❌ 合同/选型问题                                                          |
 
-插件只能约束经过 DSH 工具管线与消息管线的内容。v2 计划加入目的地址级出站守卫（issue [#5](https://github.com/gythialy/dsh-sensitive-guard/issues/5)）：它约束连接能去哪里，而不是内容本身，且明确不做 TLS 中间人。
+内容层只能约束经过 DSH 工具管线与消息管线的内容。可选出站守卫（`egress.enabled`）为遵守 `HTTPS_PROXY` 的子进程增加目的地址级控制：它约束连接能去哪里，而不是内容本身，且明确不做 TLS 中间人。
 
 ## 功能
 
@@ -70,9 +70,15 @@ dsh plugin --profile web add \
 
 指南包含一条安装命令、挂载验证、重启、可选的 `enforce` 配置与回滚。
 
-### 从 npm 安装（计划中）
+### 从 npm 安装
 
-由 [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6) 跟踪；未来 npmjs 发布使用同一个 scoped 名。
+从 v0.2.0 起发布到 npmjs：
+
+```bash
+dsh plugin --profile web add @r0cky20/dsh-sensitive-guard
+```
+
+不要从 GitHub Packages 安装 `@gythialy/dsh-sensitive-guard` 镜像，那个 registry 需要 GitHub 认证，不是面向用户的路径。
 
 ### 从源码安装（开发期）
 
