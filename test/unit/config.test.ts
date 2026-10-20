@@ -21,6 +21,24 @@ describe('config', () => {
     expect(config.audit.enabled).toBe(true)
   })
 
+  it('keeps the egress guard off by default and denies cloud metadata', () => {
+    const config = resolveConfig()
+    expect(config.egress).toMatchObject({
+      enabled: false,
+      port: 41_999,
+      failClosed: true,
+      unknown: 'allow',
+      allow: [],
+      upstream: '',
+      canary: true,
+    })
+    expect(config.egress.deny).toContain('169.254.169.254:80')
+  })
+
+  it('rejects an unknown egress default', () => {
+    expect(() => resolveConfig({ egress: { unknown: 'maybe' } })).toThrow()
+  })
+
   it('fills nested defaults without discarding overrides', () => {
     const config = resolveConfig({
       mode: 'enforce',

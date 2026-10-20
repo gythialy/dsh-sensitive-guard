@@ -6,6 +6,25 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Opt-in destination-level egress guard (ADR D4b, design §6.6.1/§19.5): a
+  zero-dependency loopback CONNECT + plain-HTTP forward proxy on
+  `127.0.0.1:<egress.port>` that fills DSH's launch-time `HTTPS_PROXY` seam.
+  `host`/`host:port` allow-deny with globs, unknown destinations default to
+  allow-with-audit, cloud metadata endpoints are denied by default, `enforce`
+  refuses to mount when the port cannot bind (`failClosed`), optional upstream
+  chaining, and no certificate authority.
+- `egress` audit phase (`mount`/`connect`/`close`/`deny`/`canary`/`error`)
+  recording host, port, decision, rule id, bytes, and duration — never a path,
+  header, or body.
+- `/guard egress [status|canary]`: listener, live `https_proxy` wiring check,
+  counters, recent destinations, and a loopback canary that proves the tunnel
+  instead of claiming coverage.
+- Tests: policy, real-listener CONNECT and plain-HTTP forwarding, canary
+  outcomes, upstream chaining, `apply()` mount/audit/dispose, and a spawned
+  `curl -x` allow/deny pair.
+
 ## [0.1.1] - 2026-10-20
 
 ### Added

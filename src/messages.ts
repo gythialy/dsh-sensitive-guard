@@ -6,6 +6,8 @@
  * @module dsh-sensitive-guard/messages
  */
 import type { RedactionHit } from './contracts.js'
+import type { CanaryCode, CanaryResult } from './egress/canary.js'
+import type { EgressSnapshot } from './egress/index.js'
 import type { GuardLocale } from './locale.js'
 
 export type { GuardLocale } from './locale.js'
@@ -296,6 +298,14 @@ export function noticeText(hits: readonly RedactionHit[], locale: GuardLocale = 
     : 'Sensitive Guard redacted: ' + categories + '. The originals were replaced with placeholders.'
 }
 
+/** Compact egress state reused by `/guard status` and the startup line. */
+export interface EgressSummary {
+  bound: boolean
+  port: number
+  mode: string
+  envMatches: boolean
+}
+
 export interface GuardStatus {
   mode: string
   failClosed: boolean
@@ -307,6 +317,8 @@ export interface GuardStatus {
   auditPath: string
   piiEnabled: boolean
   piiRestore: boolean
+  /** Absent when `egress.enabled` is off. */
+  egress?: EgressSummary
 }
 
 /** `/guard status`: a short key-value block, not a machine status line. */
@@ -329,10 +341,206 @@ export function statusText(status: GuardStatus, locale: GuardLocale = 'en'): str
     (locale === 'zh' ? '  审计: ' : '  audit: ') + audit,
     (locale === 'zh' ? '  PII: ' : '  pii: ') + (status.piiEnabled ? on : off),
     (locale === 'zh' ? '  PII 恢复: ' : '  pii restore: ') + (status.piiRestore ? on : off),
+    ...(status.egress === undefined ? [] : [egressSummaryLine(status.egress, locale)]),
     locale === 'zh'
       ? '  提示: /guard on|off 只影响当前进程'
       : '  note: /guard on|off changes this process only',
   ].join(NL)
+}
+
+/** One-line egress state for `/guard status` and the startup line. */
+export function egressSummaryLine(summary: EgressSummary, locale: GuardLocale = 'en'): string {
+  const zh = locale === 'zh'
+  const state = summary.bound ? (zh ? '已绑定' : 'bound') : zh ? '未绑定' : 'not bound'
+  const wiring = summary.envMatches
+    ? zh
+      ? '环境正常'
+      : 'env ok'
+    : zh
+      ? '环境未接线'
+      : 'env not wired'
+  return (
+    (zh ? '  出站守卫: ' : '  egress: ') +
+    '127.0.0.1:' +
+    String(summary.port) +
+    ' ' +
+    state +
+    ' (' +
+    summary.mode +
+    '), ' +
+    wiring
+  )
+}
+
+/** `/guard egress status`: listener, wiring, rules, counters, and recents. */
+export function egressStatusText(snapshot: EgressSnapshot, locale: GuardLocale = 'en'): string {
+  const zh = locale === 'zh'
+  const lines = [zh ? '敏感信息守卫出站守卫' : 'Sensitive Guard egress']
+  lines.push(
+    (zh ? '  监听: ' : '  listener: ') +
+      snapshot.host +
+      ':' +
+      String(snapshot.port) +
+      ' — ' +
+      (snapshot.bound ? (zh ? '已绑定' : 'bound') : zh ? '未绑定' : 'not bound') +
+      ' (' +
+      snapshot.mode +
+      ')',
+  )
+  lines.push(
+    (zh ? '  接线: ' : '  wiring: ') +
+      (snapshot.envMatches
+        ? zh
+          ? 'https_proxy 指向本监听（正常）'
+          : 'https_proxy points at this listener (ok)'
+        : snapshot.proxyEnv === undefined
+          ? zh
+            ? 'https_proxy 未设置，流量不被覆盖'
+            : 'https_proxy is not set; traffic is not covered'
+          : zh
+            ? 'https_proxy 指向别处: ' + snapshot.proxyEnv
+            : 'https_proxy points elsewhere: ' + snapshot.proxyEnv),
+  )
+  lines.push(
+    (zh ? '  规则: ' : '  rules: ') +
+      'deny=' +
+      String(snapshot.denyRules) +
+      (zh ? '，allow=' : ', allow=') +
+      String(snapshot.allowRules) +
+      (zh ? '，未知=' : ', unknown=') +
+      snapshot.unknown,
+  )
+  if (snapshot.upstream !== undefined) {
+    lines.push((zh ? '  上游: ' : '  upstream: ') + snapshot.upstream)
+  }
+  lines.push(
+    (zh ? '  流量: ' : '  traffic: ') +
+      (zh ? '隧道=' : 'tunnels=') +
+      String(snapshot.counts.tunnels) +
+      (zh ? '，拦截=' : ', blocked=') +
+      String(snapshot.counts.denied) +
+      (zh ? '，入=' : ', in=') +
+      formatBytes(snapshot.counts.bytesIn) +
+      (zh ? '，出=' : ', out=') +
+      formatBytes(snapshot.counts.bytesOut),
+  )
+  if (snapshot.recent.length > 0) {
+    lines.push(
+      (zh ? '  最近: ' : '  recent: ') +
+        snapshot.recent
+          .map(
+            (entry) =>
+              entry.host +
+              ':' +
+              String(entry.port) +
+              ' ' +
+              entry.decision +
+              (entry.enforced ? '!' : '') +
+              '(' +
+              entry.reason +
+              ')',
+          )
+          .join(zh ? '、' : ', '),
+    )
+  }
+  if (snapshot.lastCanary !== undefined) {
+    lines.push((zh ? '  探针: ' : '  canary: ') + snapshot.lastCanary.code)
+  }
+  if (!snapshot.envMatches) {
+    lines.push(
+      zh
+        ? '  提示: 启动前在 $DSH_HOME/.env 设置 https_proxy=http://127.0.0.1:' +
+            String(snapshot.port)
+        : '  hint: set https_proxy=http://127.0.0.1:' +
+            String(snapshot.port) +
+            ' in $DSH_HOME/.env before launch',
+    )
+  }
+  return lines.join(NL)
+}
+
+function canaryDetail(code: CanaryCode, zh: boolean): string {
+  switch (code) {
+    case 'ok':
+      return zh ? '成功' : 'ok'
+    case 'refused':
+      return zh ? '连接被拒绝，监听未运行' : 'connection refused; the listener is not running'
+    case 'timeout':
+      return zh ? '超时' : 'timed out'
+    case 'denied':
+      return zh
+        ? '被守卫策略拒绝（127.0.0.1 在 deny 列表里？）'
+        : 'refused by guard policy (is 127.0.0.1 denied?)'
+    case 'protocol':
+      return zh ? 'CONNECT 响应无法识别' : 'unrecognised CONNECT response'
+    case 'echo-mismatch':
+      return zh ? '隧道回显不一致' : 'tunnel echo did not match'
+  }
+}
+
+/** Result of one canary probe, including what to check when it fails. */
+export function egressCanaryText(
+  result: CanaryResult,
+  port: number,
+  locale: GuardLocale = 'en',
+): string {
+  const zh = locale === 'zh'
+  const detail = canaryDetail(result.code, zh)
+  const latency = String(result.latencyMs) + (zh ? ' 毫秒' : ' ms')
+  if (result.ok) {
+    return zh
+      ? '敏感信息守卫探针: ' + detail + '（' + latency + '）。'
+      : 'Sensitive Guard canary: ' + detail + ' (' + latency + ').'
+  }
+  return (
+    (zh ? '敏感信息守卫探针失败: ' : 'Sensitive Guard canary failed: ') +
+    detail +
+    '（' +
+    latency +
+    '）。' +
+    NL +
+    (zh
+      ? '请确认启动环境里设置了 https_proxy=http://127.0.0.1:' +
+        String(port) +
+        '，且该端口是本进程监听的端口。'
+      : 'Check that the launch environment sets https_proxy=http://127.0.0.1:' +
+        String(port) +
+        ' and that this process owns that port.')
+  )
+}
+
+/** `/guard egress` before `egress.enabled`. */
+export function egressDisabledText(locale: GuardLocale = 'en'): string {
+  return locale === 'zh'
+    ? '敏感信息守卫: 出站守卫未启用。设置 egress.enabled: true，并在启动环境里设置 https_proxy=http://127.0.0.1:<egress.port>，然后重启 DSH。'
+    : 'Sensitive Guard: the egress guard is off. Set egress.enabled: true, export https_proxy=http://127.0.0.1:<egress.port> before launch, and restart DSH.'
+}
+
+/** `/guard egress` when the config is on but this process mounted nothing. */
+export function egressUnavailableText(locale: GuardLocale = 'en'): string {
+  return locale === 'zh'
+    ? '敏感信息守卫: egress.enabled 已打开，但当前进程没有挂载监听。检查启动日志里的绑定错误。'
+    : 'Sensitive Guard: egress.enabled is on but this process mounted no listener. Check the startup log for a bind error.'
+}
+
+/** Startup line emitted after the egress listener settles. */
+export function egressStartupText(snapshot: EgressSnapshot, locale: GuardLocale = 'en'): string {
+  const zh = locale === 'zh'
+  const address = snapshot.host + ':' + String(snapshot.port)
+  if (!snapshot.bound) {
+    return zh
+      ? '敏感信息守卫出站守卫未绑定（' + address + '）。'
+      : 'Sensitive Guard egress guard is not bound (' + address + ').'
+  }
+  return snapshot.envMatches
+    ? zh
+      ? '敏感信息守卫出站守卫已就绪: ' + address + '，https_proxy 已接线。'
+      : 'Sensitive Guard egress guard ready on ' + address + '; https_proxy is wired.'
+    : zh
+      ? '敏感信息守卫出站守卫已绑定 ' + address + '，但 https_proxy 未指向它：客户端流量不被覆盖。'
+      : 'Sensitive Guard egress guard bound on ' +
+        address +
+        ' but https_proxy does not point at it: launched clients are not covered.'
 }
 
 /** `/guard on|off` confirmation; the mode is never persisted. */
@@ -383,12 +591,14 @@ const COMMANDS: Record<GuardLocale, Array<[string, string]>> = {
     ['status', 'show the current settings'],
     ['on', 'enforce for this process'],
     ['off', 'monitor for this process'],
+    ['egress [status|canary]', 'egress guard state and a loopback canary probe'],
     ['restore <placeholder> <file>', 'write one restored PII value (mode 0600)'],
   ],
   zh: [
     ['status', '显示当前设置'],
     ['on', '当前进程启用 enforce'],
     ['off', '当前进程切换为 monitor'],
+    ['egress [status|canary]', '出站守卫状态与回环探针'],
     ['restore <placeholder> <file>', '写入一个恢复的 PII 值（0600 权限）'],
   ],
 }

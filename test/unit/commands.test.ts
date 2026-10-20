@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AuditLog } from '../../src/audit.js'
 import { runGuardCommand } from '../../src/commands/guard.js'
 import { resolveConfig } from '../../src/config.js'
+import type { EgressController, EgressSnapshot } from '../../src/egress/index.js'
 import type { GuardRuntime } from '../../src/hooks/runtime.js'
 import type { PolicyEngine } from '../../src/contracts.js'
 import { createRedactor } from '../../src/redact/index.js'
@@ -146,6 +147,120 @@ describe('/guard command', () => {
   it('returns usage for unknown subcommands', async () => {
     const { runtime } = await makeRuntime()
     const result = await runGuardCommand(runtime, 'bogus')
+    expect(result.kind).toBe('error')
+    expect(result.kind === 'error' ? result.text : '').toContain('Usage:')
+  })
+})
+
+describe('/guard egress', () => {
+  const snapshot: EgressSnapshot = {
+    enabled: true,
+    bound: true,
+    host: '127.0.0.1',
+    port: 41_999,
+    mode: 'monitor',
+    unknown: 'allow',
+    failClosed: true,
+    allowRules: 0,
+    denyRules: 1,
+    proxyEnv: 'http://127.0.0.1:41999',
+    envMatches: true,
+    counts: { tunnels: 2, allowed: 2, denied: 0, bytesIn: 2048, bytesOut: 1024 },
+    lastCanary: { ok: true, code: 'ok', latencyMs: 3, status: 200 },
+    recent: [
+      {
+        host: 'api.example.com',
+        port: 443,
+        decision: 'allow',
+        enforced: false,
+        reason: 'unknown-allow',
+      },
+    ],
+  }
+
+  function controller(overrides: Partial<EgressController> = {}): EgressController {
+    return {
+      port: snapshot.port,
+      bound: true,
+      snapshot: () => snapshot,
+      canary: async () => ({ ok: true, code: 'ok', latencyMs: 3, status: 200 }),
+      close: async () => undefined,
+      ...overrides,
+    }
+  }
+
+  async function egressRuntime(controllerValue?: EgressController): Promise<GuardRuntime> {
+    const { runtime } = await makeRuntime()
+    runtime.config.egress.enabled = true
+    if (controllerValue !== undefined) runtime.egress = controllerValue
+    return runtime
+  }
+
+  it('explains that the guard is off before it is configured', async () => {
+    const { runtime } = await makeRuntime()
+    const result = await runGuardCommand(runtime, 'egress')
+    expect(result.kind).toBe('error')
+    expect(result.kind === 'error' ? result.text : '').toContain('egress guard is off')
+  })
+
+  it('reports a configured-but-unmounted guard', async () => {
+    const runtime = await egressRuntime()
+    const result = await runGuardCommand(runtime, 'egress')
+    expect(result.kind).toBe('error')
+    expect(result.kind === 'error' ? result.text : '').toContain('mounted no listener')
+  })
+
+  it('renders listener, wiring, rules, traffic, and recents', async () => {
+    const runtime = await egressRuntime(controller())
+    const result = await runGuardCommand(runtime, 'egress status')
+    expect(result.kind).toBe('success')
+    const text = result.kind === 'success' ? (result.text ?? '') : ''
+    expect(text).toContain('listener: 127.0.0.1:41999')
+    expect(text).toContain('bound')
+    expect(text).toContain('https_proxy points at this listener')
+    expect(text).toContain('deny=1, allow=0, unknown=allow')
+    expect(text).toContain('tunnels=2')
+    expect(text).toContain('api.example.com:443 allow(unknown-allow)')
+    expect(text).toContain('canary: ok')
+    expect(text).not.toContain('secret')
+  })
+
+  it('reports the canary result, success and failure', async () => {
+    const runtime = await egressRuntime(controller())
+    const ok = await runGuardCommand(runtime, 'egress canary')
+    expect(ok.kind).toBe('success')
+    expect(ok.kind === 'success' ? ok.text : '').toContain('canary: ok')
+
+    const failing = controller({
+      canary: async () => ({ ok: false, code: 'refused', latencyMs: 1 }),
+    })
+    const failed = await runGuardCommand(await egressRuntime(failing), 'egress canary')
+    expect(failed.kind).toBe('error')
+    const text = failed.kind === 'error' ? failed.text : ''
+    expect(text).toContain('connection refused')
+    expect(text).toContain('https_proxy=http://127.0.0.1:41999')
+  })
+
+  it('shows a count-only egress line in /guard status', async () => {
+    const runtime = await egressRuntime(controller())
+    const result = await runGuardCommand(runtime, 'status')
+    const text = result.kind === 'success' ? (result.text ?? '') : ''
+    expect(text).toContain('egress: 127.0.0.1:41999 bound (monitor), env ok')
+  })
+
+  it('localizes the egress surfaces', async () => {
+    const runtime = await egressRuntime(controller())
+    runtime.locale = () => 'zh'
+    const result = await runGuardCommand(runtime, 'egress')
+    const text = result.kind === 'success' ? (result.text ?? '') : ''
+    expect(text).toContain('敏感信息守卫出站守卫')
+    expect(text).toContain('已绑定')
+    expect(text).toContain('隧道=2')
+  })
+
+  it('rejects an unknown egress subcommand with usage', async () => {
+    const runtime = await egressRuntime(controller())
+    const result = await runGuardCommand(runtime, 'egress bogus')
     expect(result.kind).toBe('error')
     expect(result.kind === 'error' ? result.text : '').toContain('Usage:')
   })

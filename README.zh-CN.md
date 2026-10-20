@@ -113,6 +113,15 @@ policy:
 paths:
   deny: ['**/.env', '**/.ssh/**', '**/*.pem']
   allow: ['**/.env.example', '**/.env.sample', '**/.env.template']
+egress: # 可选的目的地址级出站守卫，默认关闭
+  enabled: false
+  port: 41999
+  failClosed: true
+  unknown: allow
+  allow: []
+  deny: ['169.254.169.254:80', 'metadata.google.internal']
+  upstream: ''
+  canary: true
 audit:
   path: ~/.dsh/audit/sensitive-guard.jsonl
 ```
@@ -128,6 +137,30 @@ PII key 文件为 32 字节随机值，权限 `0600`（父目录 `0700`）。不
 - `/guard status`：模式、等级、规则数、审计与 PII/restore 状态；不含明文或匹配值。
 - `/guard on` / `/guard off`：仅对当前进程切换 `enforce`/`monitor`，不持久化。
 - `/guard restore <placeholder> <file>`：需 `pii.restore: true`；把原始 PII 写入新的 `0600` 文件，拒绝覆盖，绝不回显原值。映射只在内存中，只有开启 restore 后在本进程内生成的占位符可恢复；密钥仍不可逆。
+- `/guard egress [status|canary]`：可选出站守卫的状态：监听、`https_proxy` 是否指向本进程、规则数、隧道/拦截/字节计数、最近目标，以及回环探针。
+
+### 出站守卫（可选，默认关闭）
+
+v2 在 DSH 已有的 `HTTPS_PROXY` 缝隙上做**目的地址级** CONNECT 守卫：只看
+host/port，不做 TLS 中间人、不装 CA。必须在启动环境里接线才生效：
+
+```bash
+# $DSH_HOME/.env（或在启动前 export），然后重启 DSH
+https_proxy=http://127.0.0.1:41999
+```
+
+```yaml
+egress:
+  enabled: true
+  port: 41999
+  unknown: allow # 先放行+审计；要白名单就改 deny
+  deny: ['169.254.169.254:80', 'upload.example.com:443']
+```
+
+覆盖范围如实说明：DSH 对 loopback 强制直连，telemetry 与 PTC/workflow worker
+不走代理，JVM、rustls、静态 Go、容器、SSH、HTTP/3 也会忽略或绕过代理变量。
+被拒的隧道返回 `403` 与 `X-Guard-Reason`。完整契约见
+[docs/configuration.md](docs/configuration.md#egress)。
 
 审批提示会说明工具、简短风险类别（如 `高风险命令`、`敏感路径`）以及脱敏后的具体操作；密钥会替换为占位符，URL 凭据会打码。拒绝原因会说明拦截理由并给出一条安全的下一步。`/guard status` 输出带标签的键值块，而不是 `key=value` 行。守卫提示跟随 DSH 语言设置（`en` / `zh`）；未设置时依次回退到进程 locale 和英文。
 
@@ -154,7 +187,7 @@ node bin/scan.mjs --json --no-exit-code .
 - 无法改写 DSH 的 `agent/inbox/spliced` 原文与 assistant 输出。
 - 安装前的历史会话不会自动重写。
 - 工具**参数**中的密钥只能阻止执行，无法改写参数（host 在 pre-execute 前已记录）。
-- v1 不做进程级 HTTP/CONNECT 代理。v2 计划复用 DSH 的 `HTTPS_PROXY` 缝隙做目的地址级出站守卫（只有 host 级、不装 CA），见 [issue #5](https://github.com/gythialy/dsh-sensitive-guard/issues/5) 与 [设计文档 §19](docs/sensitive-guard-integration.md)；不做 OCR/图片脱敏。
+- 出站守卫是可选的**目的地址级**控制：只覆盖遵守 `https_proxy` 的客户端，HTTPS 只能看到 `host:port`。loopback、telemetry、PTC/workflow worker、JVM、rustls、静态 Go、容器、SSH 与原始套接字都会绕过；不做 CA、不做 TLS 中间人。详见 [docs/configuration.md](docs/configuration.md#egress) 与 [设计文档 §19](docs/sensitive-guard-integration.md)；不做 OCR/图片脱敏。
 - 脱敏隐私优先：误报可能去掉正常文本；先 `monitor` 再收敛规则。
 
 ## 开发
