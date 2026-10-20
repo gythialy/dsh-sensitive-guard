@@ -4,16 +4,14 @@ Releases are started by a human and published by automation. Creating and
 publishing a GitHub Release is the only trigger; the workflow does not create
 the release.
 
-| Channel                                           | Audience                          | Auth on install              |
-| ------------------------------------------------- | --------------------------------- | ---------------------------- |
-| GitHub Release tarball                            | everyone                          | none                         |
-| GitHub Packages (`@gythialy/dsh-sensitive-guard`) | users with a GitHub token         | classic PAT, `read:packages` |
-| npmjs                                             | optional, when `NPM_TOKEN` exists | none                         |
-| GitHub Release assets                             | everyone                          | none                         |
+| Channel                | Audience                                       |
+| ---------------------- | ---------------------------------------------- |
+| GitHub Release tarball | users                                          |
+| GitHub Packages        | authenticated mirror published by the workflow |
+| npmjs                  | optional, when `NPM_TOKEN` exists              |
 
-GitHub Packages requires a scoped package name, so the canonical name is
-`@gythialy/dsh-sensitive-guard`. The repository stays
-`gythialy/dsh-sensitive-guard`.
+The canonical package name is `@gythialy/dsh-sensitive-guard`; the repository
+stays `gythialy/dsh-sensitive-guard`.
 
 ## 1. Prepare the release commit
 
@@ -76,14 +74,7 @@ Publishing emits `release: published` and runs
 A missing `NPM_TOKEN` is not an error: the npmjs step logs a skip. No
 repository secret is needed for GitHub Packages.
 
-## 4. Make the GitHub Packages package public
-
-The first GitHub Packages publication is **private**. In
-`Repository → Packages → @gythialy/dsh-sensitive-guard → Package settings →
-Danger Zone → Change visibility`, choose **Public**. This cannot be undone.
-Installation still requires a token after the package is public.
-
-## 5. Verify
+## 4. Verify
 
 ### Tarball (anonymous)
 
@@ -106,18 +97,8 @@ shasum -a 256 -c SHA256SUMS   # macOS; use sha256sum -c on Linux
 `latest/download/dsh-sensitive-guard.tgz` stays stable because the asset name
 has no version.
 
-### GitHub Packages (token)
-
-```ini
-# ~/.dsh/profiles/web/.npmrc
-@gythialy:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
-```
-
-```bash
-export GITHUB_PACKAGES_TOKEN=ghp_xxx   # classic PAT, read:packages
-DSH_HOME="$(mktemp -d)" dsh plugin --profile web add @gythialy/dsh-sensitive-guard
-```
+The workflow log prints `+ @gythialy/dsh-sensitive-guard@<version>` after the
+GitHub Packages step; that is the publication check.
 
 ### npmjs (when enabled)
 
@@ -126,16 +107,15 @@ npm view @gythialy/dsh-sensitive-guard version dist.tarball --registry https://r
 npm audit signatures --registry https://registry.npmjs.org
 ```
 
-## 6. Failure and rollback
+## 5. Failure and rollback
 
-| Failure                                   | Action                                                          |
-| ----------------------------------------- | --------------------------------------------------------------- |
-| Draft release has a bad tag or version    | edit the draft/tag before publishing                            |
-| Workflow fails before any publication     | fix, delete the release/tag, publish a new release              |
-| GitHub Packages published, assets missing | rerun the job; do not republish the same version                |
-| Only npmjs failed                         | fix `NPM_TOKEN`, bump the patch version, publish a new release  |
-| Broken version already published          | publish a patch version; deprecate the old one                  |
-| Leaked token                              | revoke it, update the secret, publish a patch version if needed |
+| Failure                                   | Action                                                         |
+| ----------------------------------------- | -------------------------------------------------------------- |
+| Draft release has a bad tag or version    | edit the draft/tag before publishing                           |
+| Workflow fails before any publication     | fix, delete the release/tag, publish a new release             |
+| GitHub Packages published, assets missing | rerun the job; do not republish the same version               |
+| Only npmjs failed                         | fix `NPM_TOKEN`, bump the patch version, publish a new release |
+| Broken version already published          | publish a patch version; deprecate the old one                 |
 
 Never reuse a published version number, and never re-run a workflow that
 already published to one registry without checking the other.

@@ -52,35 +52,26 @@ the issue list is the single source of truth.
 
 ## Install
 
-### From GitHub Release (recommended)
+### From GitHub Release
 
-No npm account or token is required. Verify the download against the
-`SHA256SUMS` asset from the same release, then install:
+Verify the download against the `SHA256SUMS` asset from the same release, then
+install:
 
 ```bash
 dsh plugin --profile web add \
   https://github.com/gythialy/dsh-sensitive-guard/releases/latest/download/dsh-sensitive-guard.tgz
 ```
 
-### From GitHub Packages
+### Agent-assisted install
 
-GitHub Packages requires a GitHub token even for public packages. Add the scope
-and token to the DSH profile's `.npmrc`:
+Point a coding agent at [docs/agent-install.md](docs/agent-install.md), or give
+it this prompt:
 
-```ini
-# ~/.dsh/profiles/web/.npmrc
-@gythialy:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
-```
+> Install dsh-sensitive-guard into my DSH web profile by following
+> https://github.com/gythialy/dsh-sensitive-guard/blob/main/docs/agent-install.md
 
-Use a classic PAT with `read:packages`, then:
-
-```bash
-dsh plugin --profile web add @gythialy/dsh-sensitive-guard
-```
-
-The package is private by default after the first publish; set it to public in
-the package settings. Installation still requires the token.
+The guide covers the single install command, verification, restart, optional
+`enforce` configuration, and rollback.
 
 ### From npm (planned)
 
