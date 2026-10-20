@@ -31,7 +31,7 @@ body:
   - type: input
     id: guard-version
     attributes:
-      label: '@gythialy/dsh-sensitive-guard version'
+      label: '@r0cky20/dsh-sensitive-guard version'
       placeholder: 0.0.0
     validations:
       required: true

@@ -42,7 +42,7 @@ Expected row:
 
 ```yaml
 - id: sensitive-guard
-  name: '@gythialy/dsh-sensitive-guard'
+  name: '@r0cky20/dsh-sensitive-guard'
   config:
     mode: monitor
 ```
@@ -65,7 +65,7 @@ Profile override: `~/.dsh/profiles/<profile>/cordis.patch.yml`
 
 ```yaml
 - id: sensitive-guard
-  name: '@gythialy/dsh-sensitive-guard'
+  name: '@r0cky20/dsh-sensitive-guard'
   config:
     mode: enforce
 ```
@@ -90,7 +90,7 @@ block unknown destinations. Do not switch to `unknown: deny` or invent an
 ## 6. Rollback
 
 ```bash
-dsh plugin --profile "$PROFILE" remove @gythialy/dsh-sensitive-guard
+dsh plugin --profile "$PROFILE" remove @r0cky20/dsh-sensitive-guard
 ```
 
 Then ask the user to restart.
@@ -99,7 +99,9 @@ Then ask the user to restart.
 
 - Never print or read secrets, tokens, private keys, or full credential paths.
 - Do not install from `npm.pkg.github.com`; that registry needs GitHub auth and
-  is not the user-facing path.
+  is not the user-facing path. Its mirror is published under the different name
+  `@gythialy/dsh-sensitive-guard`; the canonical name everywhere else is
+  `@r0cky20/dsh-sensitive-guard`.
 - Do not modify the repository checkout, commit, tag, or release anything for an
   install request.
 - If a command fails, report the exact stderr and stop; do not retry with a

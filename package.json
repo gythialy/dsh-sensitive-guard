@@ -1,5 +1,5 @@
 {
-  "name": "@gythialy/dsh-sensitive-guard",
+  "name": "@r0cky20/dsh-sensitive-guard",
   "version": "0.1.1",
   "description": "Sensitive-data guard for DeepSeek Harness: blocks credential reads/outbound secrets and redacts secrets, tokens, and PII before they reach the model, session log, or spill files.",
   "keywords": [
@@ -56,7 +56,6 @@
   },
   "publishConfig": {
     "access": "public",
-    "registry": "https://npm.pkg.github.com",
     "tag": "latest"
   },
   "scripts": {
