@@ -1,6 +1,6 @@
 # Example profile override: ~/.dsh/profiles/web/cordis.patch.yml
 - id: sensitive-guard
-  name: dsh-sensitive-guard
+  name: '@gythialy/dsh-sensitive-guard'
   config:
     mode: monitor
     defaultDecision: allow

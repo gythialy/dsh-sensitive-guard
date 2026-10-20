@@ -51,13 +51,36 @@ issue 列表是唯一来源。
 
 ## 安装
 
-### 从 npm 安装（计划中）
+### 从 GitHub Release 安装（推荐）
 
-首个公开版本由 [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6) 跟踪。发布后：
+无需 npm 账号或 token；先用同一 release 的 `SHA256SUMS` 校验下载文件，然后：
 
 ```bash
-dsh plugin --profile web add dsh-sensitive-guard
+dsh plugin --profile web add \
+  https://github.com/gythialy/dsh-sensitive-guard/releases/latest/download/dsh-sensitive-guard.tgz
 ```
+
+### 从 GitHub Packages 安装
+
+GitHub Packages 即使公开包也要求 GitHub token。在 DSH profile 的 `.npmrc` 中配置 scope 与 token：
+
+```ini
+# ~/.dsh/profiles/web/.npmrc
+@gythialy:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
+```
+
+使用带 `read:packages` 的 classic PAT，然后：
+
+```bash
+dsh plugin --profile web add @gythialy/dsh-sensitive-guard
+```
+
+首次发布后包默认是 private，需要到 package settings 改为 public；但安装仍然需要 token。
+
+### 从 npm 安装（计划中）
+
+由 [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6) 跟踪；未来 npmjs 发布使用同一个 scoped 名。
 
 ### 从源码安装（开发期）
 
@@ -74,7 +97,7 @@ dsh plugin --profile web add link:"$PWD"
 ```yaml
 # ~/.dsh/profiles/web/cordis.patch.yml
 - id: sensitive-guard
-  name: dsh-sensitive-guard
+  name: '@gythialy/dsh-sensitive-guard'
   config:
     mode: monitor
 ```

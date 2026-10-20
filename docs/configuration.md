@@ -171,7 +171,7 @@ URLs in `url`/`uri`/`endpoint` arguments and in shell commands are inspected.
 ```yaml
 # ~/.dsh/profiles/web/cordis.patch.yml
 - id: sensitive-guard
-  name: dsh-sensitive-guard
+  name: '@gythialy/dsh-sensitive-guard'
   config:
     mode: monitor
     levels:

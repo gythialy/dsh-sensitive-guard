@@ -46,11 +46,14 @@ threat-model impact in the PR template.
 
 ## Release
 
-- The first npm release is tracked in
-  [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6); follow its checklist.
-- Tags matching `v*` run `.github/workflows/release.yml`: verify, build, publish to npm
-  with provenance, and create a GitHub release. The workflow needs an `NPM_TOKEN`
-  repository secret with publish rights.
+- The first dual-channel release is tracked in
+  [#7](https://github.com/gythialy/dsh-sensitive-guard/issues/7); follow
+  [RELEASING.md](RELEASING.md). npmjs is deferred and tracked in
+  [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6).
+- Tags matching `v*` run `.github/workflows/release.yml`: verify, publish
+  `@gythialy/dsh-sensitive-guard` to GitHub Packages with `GITHUB_TOKEN`, and attach a
+  version-free `dsh-sensitive-guard.tgz` plus `SHA256SUMS` to the GitHub release. No
+  `NPM_TOKEN` secret is needed; the workflow uses `packages: write`.
 - Bump `version` in `package.json` and move the `CHANGELOG` entries out of
   `[Unreleased]` in the release commit.
 - After the first release, land changes on `main` through pull requests; keep release

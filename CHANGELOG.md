@@ -33,8 +33,11 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 
 - README roadmap is now managed entirely in GitHub Issues; the status table was
-  removed. The install section documents the planned npm release
-  ([#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6)).
+  removed.
+- Canonical package name is now `@gythialy/dsh-sensitive-guard`, required by GitHub
+  Packages. The same build is distributed as a GitHub Release tarball and via
+  GitHub Packages; npmjs remains deferred and tracked in #6. The release workflow no
+  longer needs `NPM_TOKEN` and attaches `SHA256SUMS` to the release.
 
 ### Known limitations
 

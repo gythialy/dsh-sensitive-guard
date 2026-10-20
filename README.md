@@ -51,13 +51,40 @@ the issue list is the single source of truth.
 
 ## Install
 
-### From npm (planned)
+### From GitHub Release (recommended)
 
-The first public release is tracked in [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6). Once published:
+No npm account or token is required. Verify the download against the
+`SHA256SUMS` asset from the same release, then install:
 
 ```bash
-dsh plugin --profile web add dsh-sensitive-guard
+dsh plugin --profile web add \
+  https://github.com/gythialy/dsh-sensitive-guard/releases/latest/download/dsh-sensitive-guard.tgz
 ```
+
+### From GitHub Packages
+
+GitHub Packages requires a GitHub token even for public packages. Add the scope
+and token to the DSH profile's `.npmrc`:
+
+```ini
+# ~/.dsh/profiles/web/.npmrc
+@gythialy:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
+```
+
+Use a classic PAT with `read:packages`, then:
+
+```bash
+dsh plugin --profile web add @gythialy/dsh-sensitive-guard
+```
+
+The package is private by default after the first publish; set it to public in
+the package settings. Installation still requires the token.
+
+### From npm (planned)
+
+Tracked in [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6). The
+future npmjs release will use the same scoped name.
 
 ### From source (development)
 
@@ -75,7 +102,7 @@ The package ships `cordis.patch.yml` via `dsh.bundle.patch`, so the plugin row m
 ```yaml
 # ~/.dsh/profiles/web/cordis.patch.yml
 - id: sensitive-guard
-  name: dsh-sensitive-guard
+  name: '@gythialy/dsh-sensitive-guard'
   config:
     mode: monitor
     levels:
