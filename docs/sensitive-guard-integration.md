@@ -928,3 +928,26 @@ dsh plugin --profile web add link:/Users/gythialy/Developer/GitHub/sensitive-gua
 3. **工具级包装**：给每个工具注入不同 env —— 只有工具自己声明 env 才行，`pre-execute` 改不了，不可行。
 
 **建议**：向 DSH 提交 feature request（附本节）；插件侧先把审计字段留成可扩展（`phase: "egress"` 已有 host/port/decision/rule/bytes，加 `client` 向后兼容），等宿主给出 child 标识再补。在此之前，文档继续声明"审计无归因"。
+
+### 19.7 TLS 拦截门槛（issue #21）
+
+维持 D4c：v2 不做 TLS 中间人。本节只定义"什么条件下才值得重开"，避免以后由好奇心驱动实现。
+
+**重开条件（必须全部满足）**：
+
+1. 有具体工作流需要正文或路径级的出站控制，且工具管线看不到（例如第三方插件或 MCP 子进程向固定主机 POST）。
+2. 该工作流无法用"目的地址规则 + 工具级脱敏"满足。
+3. 有人负责各平台 CA 的安装/卸载与支持成本。
+
+**平台成本**（预研实测 + 公开事实，2026-10-20）：
+
+- macOS：钥匙串信任需要管理员授权；同一台机器上系统 `curl` 走 SecureTransport，Homebrew `curl` 走 `/opt/homebrew/etc/openssl@4`，即两套信任库。
+- Linux：Debian 系 `update-ca-certificates`；JVM 另有独立的 `cacerts`。
+- Windows：提权 `certutil`。
+- 浏览器：Firefox 使用 NSS 独立库，不读系统库。
+- 自带根的运行时：Node 内置 121 个根（DSH 既不设置也不校验 `NODE_EXTRA_CA_CERTS`）、rustls 的 `webpki-roots`、静态 Go、容器镜像。
+- 启动时序：CA 与 `NODE_EXTRA_CA_CERTS` 必须在 DSH 启动前就绪；插件加载后再安装也无效。
+
+**凭据暴露**：TLS 终止后守卫会看到每个 provider 的 `Authorization` 头，守卫本身成为凭据持有者。对一个以"防凭据泄露"为目标的插件而言，这是反向风险，也是 D4c 的主要理由。
+
+**结论**：条件未满足前不实现。若将来重开，先写清 CA 安装/卸载流程与"守卫持有凭据"的威胁模型，再谈代码；在那之前，正文级策略继续留在工具管线——那里本来就是明文。

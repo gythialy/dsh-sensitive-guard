@@ -29,6 +29,9 @@ All notable changes to this project are documented here. The format follows
   outcomes, upstream chaining, `apply()` mount/audit/dispose, a spawned
   `curl -x` allow/deny pair, and the audit report (windowing, rotations,
   malformed lines, YAML suggestion).
+- Research notes in the design document: §19.6 records why per-child
+  attribution is not reachable from a plugin (host support required), and §19.7
+  records the gate and platform costs for any future TLS interception.
 - Profile e2e for the guard (`test/e2e/egress.mjs`): a headless run with
   `http(s)_proxy` pointing at the guard lets the model call `bash`, proving the
   host-spawned child's request is proxied and audited; the deny variant proves
