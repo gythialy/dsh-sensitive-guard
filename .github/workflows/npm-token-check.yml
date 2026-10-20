@@ -1,0 +1,62 @@
+name: npm token check
+
+# Preflight for the `NPM_TOKEN` repository secret. It authenticates with the
+# token only; it never publishes, so it is safe to run before a release.
+#
+# The pull_request trigger exists so the check can be reviewed and observed
+# before the workflow lands on the default branch. Pull requests from forks
+# receive no secrets and are expected to fail.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/npm-token-check.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-token-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Verify NPM_TOKEN authenticates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::NPM_TOKEN is not configured for this repository"
+            exit 1
+          fi
+          # Length only: a pasted trailing newline or a truncated paste shows up
+          # here without exposing the value.
+          echo "token length: ${#NODE_AUTH_TOKEN}"
+          npm whoami --registry https://registry.npmjs.org
+
+      - name: Report target package names
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          for name in @r0cky20/dsh-sensitive-guard @gythialy/dsh-sensitive-guard; do
+            if npm view "${name}" version --registry https://registry.npmjs.org >/dev/null 2>&1; then
+              echo "${name}: already published on npmjs"
+            else
+              echo "${name}: not published on npmjs (expected before the first release)"
+            fi
+          done
