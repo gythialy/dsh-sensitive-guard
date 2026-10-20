@@ -51,10 +51,12 @@ threat-model impact in the PR template.
   [#7](https://github.com/gythialy/dsh-sensitive-guard/issues/7); follow
   [RELEASING.md](RELEASING.md). npmjs is deferred and tracked in
   [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6).
-- Tags matching `v*` run `.github/workflows/release.yml`: verify, publish
-  `@gythialy/dsh-sensitive-guard` to GitHub Packages with `GITHUB_TOKEN`, and attach a
-  version-free `dsh-sensitive-guard.tgz` plus `SHA256SUMS` to the GitHub release. No
-  `NPM_TOKEN` secret is needed; the workflow uses `packages: write`.
+- Publishing a GitHub Release (draft → Publish) triggers
+  `.github/workflows/release.yml`. The workflow checks the tag against
+  `package.json`, publishes `@gythialy/dsh-sensitive-guard` to GitHub Packages with
+  `GITHUB_TOKEN`, optionally publishes to npmjs when `NPM_TOKEN` exists, and uploads a
+  version-free `dsh-sensitive-guard.tgz` plus `SHA256SUMS` to that release. The workflow
+  does not create the release.
 - Bump `version` in `package.json` and move the `CHANGELOG` entries out of
   `[Unreleased]` in the release commit.
 - After the first release, land changes on `main` through pull requests; keep release
