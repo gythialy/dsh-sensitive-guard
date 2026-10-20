@@ -130,6 +130,5 @@ already published to one registry without checking the other.
 ## References
 
 - `.github/workflows/release.yml`
-- [#7](https://github.com/gythialy/dsh-sensitive-guard/issues/7) — first dual-channel release
-- [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6) — npmjs tracking
+- `.github/workflows/npm-token-check.yml` — `NPM_TOKEN` preflight
 - `CONTRIBUTING.md`

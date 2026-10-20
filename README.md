@@ -8,7 +8,7 @@
 
 A host-only security plugin for [DeepSeek Harness](https://github.com/deepseek-ai/dsh): it **blocks credential reads and outbound secrets**, and **redacts secrets, tokens, and PII** before they reach the model, the session log, or a spill file.
 
-> Status: **0.0.0, pre-release**. The interception and redaction vertical slice is implemented and tested. Planned work is tracked in GitHub Issues (see [Roadmap](#roadmap)); do not describe planned capabilities as available.
+> Status: **0.2.0**. The interception, redaction, and opt-in egress layers are implemented and tested. Remaining work is tracked in GitHub Issues (see [Roadmap](#roadmap)); do not describe planned capabilities as available.
 
 ## What it covers
 
@@ -25,7 +25,7 @@ A host-only security plugin for [DeepSeek Harness](https://github.com/deepseek-a
 | 9   | Third-party plugins / MCP internals | ❌ outside the DSH tool pipeline                                                  |
 | 10  | Model-provider retention            | ❌ contractual choice, not a plugin concern                                       |
 
-The guard only constrains content that traverses DSH's tool and message pipelines. A destination-level egress guard is planned for v2 (issue [#5](https://github.com/gythialy/dsh-sensitive-guard/issues/5)): it enforces where connections may go, not what they carry, and deliberately does not intercept TLS.
+Content layers only constrain traffic that traverses DSH's tool and message pipelines. The opt-in egress guard (`egress.enabled`) adds destination-level control for child processes that honour `HTTPS_PROXY`: it enforces where connections may go, not what they carry, and deliberately does not intercept TLS.
 
 ## Features
 
@@ -73,10 +73,16 @@ it this prompt:
 The guide covers the single install command, verification, restart, optional
 `enforce` configuration, and rollback.
 
-### From npm (planned)
+### From npm
 
-Tracked in [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6). The
-future npmjs release will use the same scoped name.
+Published to npmjs from v0.2.0:
+
+```bash
+dsh plugin --profile web add @r0cky20/dsh-sensitive-guard
+```
+
+Do not install the `@gythialy/dsh-sensitive-guard` mirror from GitHub Packages;
+that registry needs GitHub auth and is not the user-facing path.
 
 ### From source (development)
 

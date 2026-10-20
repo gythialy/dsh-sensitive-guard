@@ -47,10 +47,8 @@ threat-model impact in the PR template.
 
 ## Release
 
-- The first dual-channel release is tracked in
-  [#7](https://github.com/gythialy/dsh-sensitive-guard/issues/7); follow
-  [RELEASING.md](RELEASING.md). npmjs is deferred and tracked in
-  [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6).
+- Dual-channel publishing (npmjs plus the GitHub Packages mirror) is described
+  in [RELEASING.md](RELEASING.md).
 - Publishing a GitHub Release (draft → Publish) triggers
   `.github/workflows/release.yml`. The workflow checks the tag against
   `package.json`, publishes `@r0cky20/dsh-sensitive-guard` to npmjs when
