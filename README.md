@@ -25,7 +25,7 @@ A host-only security plugin for [DeepSeek Harness](https://github.com/deepseek-a
 | 9   | Third-party plugins / MCP internals | ❌ outside the DSH tool pipeline                                                  |
 | 10  | Model-provider retention            | ❌ contractual choice, not a plugin concern                                       |
 
-The guard only constrains content that traverses DSH's tool and message pipelines.
+The guard only constrains content that traverses DSH's tool and message pipelines. A destination-level egress guard is planned for v2 (issue [#5](https://github.com/gythialy/dsh-sensitive-guard/issues/5)): it enforces where connections may go, not what they carry, and deliberately does not intercept TLS.
 
 ## Features
 
@@ -183,7 +183,7 @@ The directory is `0700`, the file `0600`, and rotation keeps five `.1`–`.5` fi
 - The guard cannot rewrite DSH's `agent/inbox/spliced` receipt or assistant output; both are documented gaps.
 - Session logs written before installation are not rewritten.
 - Secrets in tool **arguments** are blocked, not rewritten: the host logs arguments before `tools/pre-execute`.
-- No process-level HTTP/CONNECT proxy, no OCR, no image redaction in v1.
+- No process-level HTTP/CONNECT proxy in v1. v2 plans a destination-level egress guard that reuses DSH's `HTTPS_PROXY` seam (host-level only, no CA); see [issue #5](https://github.com/gythialy/dsh-sensitive-guard/issues/5) and the design note in [docs/sensitive-guard-integration.md](docs/sensitive-guard-integration.md). No OCR, no image redaction.
 - Redaction is privacy-first; a false positive can remove benign text. Start in `monitor` and review.
 
 ## Development

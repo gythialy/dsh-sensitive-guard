@@ -11,6 +11,9 @@ All notable changes to this project are documented here. The format follows
 - Agent-oriented install guide (`docs/agent-install.md`) with a one-command
   tarball install, mount verification, restart guidance, optional `enforce`
   configuration, and rollback.
+- v2 egress pre-research decision (design doc §19, ADR D4b–D4e): a
+  destination-level CONNECT guard on DSH's existing `HTTPS_PROXY` seam, with
+  TLS interception explicitly rejected for v2.
 
 ### Changed
 
