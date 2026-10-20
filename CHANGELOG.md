@@ -28,6 +28,11 @@ All notable changes to this project are documented here. The format follows
   GitHub Packages token walkthrough and the outdated "private by default"
   visibility step.
 
+### Fixed
+
+- CodeQL comparison alert in `src/action-summary.ts`: identify JSON-like records
+  by object tag instead of comparing an already-narrowed value to `null`.
+
 ## [0.1.0] - 2026-10-20
 
 ### Added

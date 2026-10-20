@@ -9,8 +9,9 @@ import { cleanAction, type LocalizedAction } from './messages.js'
 
 const URL_PATTERN = /https?:\/\/[^\s"']+/g
 
+/** JSON-like record; the object tag rejects arrays, dates, regexes, and null. */
 function asRecord(value: unknown): Record<string, unknown> | undefined {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  if (Object.prototype.toString.call(value) !== '[object Object]') return undefined
   return value as Record<string, unknown>
 }
 
