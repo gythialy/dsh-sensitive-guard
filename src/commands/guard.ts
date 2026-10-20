@@ -10,6 +10,18 @@ import path from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { CommandResult } from '@deepseek-ai/dsh-commands'
 import type { GuardRuntime } from '../hooks/runtime.js'
+import {
+  RESTORE_DISABLED_TEXT,
+  RESTORE_INVALID_TEXT,
+  RESTORE_MISSING_TEXT,
+  RESTORE_UNKNOWN_TEXT,
+  modeText,
+  restoreExistsText,
+  restoreSuccessText,
+  restoreWriteFailedText,
+  statusText,
+  unknownCommandText,
+} from '../messages.js'
 import { expandHome } from '../util/paths.js'
 
 /** Placeholder grammar minted by the PII pseudonymizer. */
@@ -26,19 +38,20 @@ export async function writeRestoreFile(target: string, value: string): Promise<s
 
 function status(runtime: GuardRuntime): CommandResult {
   const config = runtime.config
-  const audit = config.audit.enabled ? 'on path=' + config.audit.path : 'off'
   return {
     kind: 'success',
-    text: [
-      `mode=${config.mode}`,
-      `failClosed=${config.failClosed}`,
-      `levels=input:${config.levels.input},output:${config.levels.output}`,
-      `policyRules=${runtime.policy.ruleCount}`,
-      `redactionRules=${runtime.redactor.ruleCount}`,
-      `audit=${audit}`,
-      `pii=${config.pii.enabled ? 'on' : 'off'}`,
-      `restore=${config.pii.restore ? 'on' : 'off'}`,
-    ].join('\n'),
+    text: statusText({
+      mode: config.mode,
+      failClosed: config.failClosed,
+      inputLevel: config.levels.input,
+      outputLevel: config.levels.output,
+      policyRules: runtime.policy.ruleCount,
+      redactionRules: runtime.redactor.ruleCount,
+      auditEnabled: config.audit.enabled,
+      auditPath: config.audit.path,
+      piiEnabled: config.pii.enabled,
+      piiRestore: config.pii.restore,
+    }),
   }
 }
 
@@ -51,7 +64,7 @@ function setMode(runtime: GuardRuntime, enabled: boolean): CommandResult {
     mode,
     action: 'allowed',
   })
-  return { kind: 'success', text: `mode=${mode}` }
+  return { kind: 'success', text: modeText(mode) }
 }
 
 /**
@@ -70,37 +83,22 @@ export async function runGuardCommand(
   if (verb === 'on') return setMode(runtime, true)
   if (verb === 'off') return setMode(runtime, false)
 
-  if (verb !== 'restore') {
-    return {
-      kind: 'error',
-      text: 'usage: /guard [status|on|off|restore <placeholder> <file>]',
-    }
-  }
+  if (verb !== 'restore') return { kind: 'error', text: unknownCommandText(verb) }
 
   const config = runtime.config
-  if (!config.pii.restore) {
-    return {
-      kind: 'error',
-      text: 'PII restore is disabled; set pii.restore: true and restart before redaction',
-    }
-  }
+  if (!config.pii.restore) return { kind: 'error', text: RESTORE_DISABLED_TEXT }
 
   const placeholder = tokens[1]
   const target = tokens[2]
   if (placeholder === undefined || target === undefined) {
-    return { kind: 'error', text: 'usage: /guard restore <placeholder> <file>' }
+    return { kind: 'error', text: RESTORE_MISSING_TEXT }
   }
   if (!PII_PLACEHOLDER.test(placeholder)) {
-    return { kind: 'error', text: 'restore accepts only [[PII_<TYPE>_<hash8>]] placeholders' }
+    return { kind: 'error', text: RESTORE_INVALID_TEXT }
   }
 
   const value = runtime.redactor.restore(placeholder)
-  if (value === undefined) {
-    return {
-      kind: 'error',
-      text: 'that placeholder was not minted in this process with restore enabled',
-    }
-  }
+  if (value === undefined) return { kind: 'error', text: RESTORE_UNKNOWN_TEXT }
 
   try {
     const file = await writeRestoreFile(target, value)
@@ -111,15 +109,12 @@ export async function runGuardCommand(
       action: 'allowed',
       rule: 'pii-restore',
     })
-    return { kind: 'success', text: `restored ${placeholder} to ${file}` }
+    return { kind: 'success', text: restoreSuccessText(placeholder, file) }
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code
     return {
       kind: 'error',
-      text:
-        code === 'EEXIST'
-          ? 'restore target already exists; choose a new file'
-          : 'restore file could not be written',
+      text: code === 'EEXIST' ? restoreExistsText(target) : restoreWriteFailedText(target),
     }
   }
 }

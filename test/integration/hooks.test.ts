@@ -188,9 +188,67 @@ describe('hook integration', () => {
     }
 
     expect(decision.kind).toBe('deny')
-    expect(decision.reason).toBeTruthy()
+    expect(decision.reason).toContain('Sensitive Guard blocked the read call: sensitive path.')
     expect(decision.reason).not.toContain(envPath)
     expect(next).not.toHaveBeenCalled()
+  })
+
+  it('asks with a localized risk prompt for a high-risk command', async () => {
+    const fake = start()
+    const preExecute = fake.listener('tools/pre-execute')
+    const next = vi.fn(async () => ({ kind: 'allow' }))
+
+    const decision = (await preExecute(
+      makeExec('bash', { command: 'git push --force origin main' }),
+      next,
+    )) as {
+      kind: string
+      reason?: string
+      displayReason?: { en: string; zh: string }
+    }
+
+    expect(decision.kind).toBe('ask')
+    expect(decision.reason).toContain(
+      'Sensitive Guard needs approval for the bash call: high-risk command.',
+    )
+    expect(decision.reason).toContain('Force-pushing rewrites remote history')
+    expect(decision.displayReason?.en).toContain('Risk: high-risk command')
+    expect(decision.displayReason?.en).toContain('Approve once only if you expect this exact call')
+    expect(decision.displayReason?.zh).toContain('风险：高风险命令')
+    expect(next).not.toHaveBeenCalled()
+  })
+
+  it('asks when tool arguments contain a credential', async () => {
+    const fake = start()
+    const preExecute = fake.listener('tools/pre-execute')
+    const next = vi.fn(async () => ({ kind: 'allow' }))
+
+    const decision = (await preExecute(
+      makeExec('write', { file_path: path.join(dir, 'notes.txt'), content: ANTHROPIC_KEY }),
+      next,
+    )) as { kind: string; reason?: string; displayReason?: { en: string } }
+
+    expect(decision.kind).toBe('ask')
+    expect(decision.reason).toContain('credential in arguments')
+    expect(decision.displayReason?.en).toContain('Risk: credential in arguments')
+    expect(JSON.stringify(decision)).not.toContain(ANTHROPIC_KEY)
+  })
+
+  it('labels credential-like URLs without echoing the URL', async () => {
+    const fake = start()
+    const preExecute = fake.listener('tools/pre-execute')
+    const next = vi.fn(async () => ({ kind: 'allow' }))
+
+    const decision = (await preExecute(
+      makeExec('web_fetch', { url: 'https://example.test/x?token=s3cret' }),
+      next,
+    )) as { kind: string; reason?: string; displayReason?: { en: string } }
+
+    expect(decision.kind).toBe('ask')
+    expect(decision.reason).toContain('credential-like URL query')
+    expect(decision.displayReason?.en).toContain('Risk: credential-like URL query')
+    expect(JSON.stringify(decision)).not.toContain('s3cret')
+    expect(JSON.stringify(decision)).not.toContain('example.test')
   })
 
   it('allows .env.example and normal calls', async () => {

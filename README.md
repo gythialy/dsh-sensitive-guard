@@ -153,6 +153,8 @@ PII key file: 32 random bytes, created with mode `0600` (parent `0700`). If it i
 - `/guard on` / `/guard off` — switch `enforce`/`monitor` for this process only; not persisted.
 - `/guard restore <placeholder> <file>` — requires `pii.restore: true`; writes the original PII to a new `0600` file, refuses to overwrite, and never echoes the value. The restore map is memory-only, so only placeholders minted in this process after enabling restore can be resolved. Secrets remain irreversible.
 
+Approval prompts name the tool and a short risk category (for example `high-risk command` or `sensitive path`) and never echo the matched value. Deny reasons state the block and one safe next step. `/guard status` prints a labeled block instead of `key=value` lines.
+
 ## Scan
 
 The package ships a standalone scanner that reuses the same rule table and

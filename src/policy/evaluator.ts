@@ -7,19 +7,17 @@
  */
 import type { GuardConfig } from '../config.js'
 import type { PolicyDecision, PolicyEngine, PolicyInput } from '../contracts.js'
+import { EVALUATION_FAILURE_REASON } from '../messages.js'
 import { commandBasename, type ParsedArgv } from './argv.js'
 import { collectEvidence, type PolicyEvidence } from './evidence.js'
 import { detectNetworkFinding, type NetworkFinding } from './network.js'
 import { loadRuleSet } from './rules.js'
 import type { CompiledArgv, CompiledRule, LoadedRuleSet } from './types.js'
 
-const EVALUATION_FAILURE_REASON = 'sensitive-guard: policy evaluation failed'
-
 const NETWORK_REASONS: Record<NetworkFinding['kind'], string> = {
-  userinfo:
-    'sensitive-guard: outbound URLs with embedded credentials are blocked; remove the credentials and use a secret store',
+  userinfo: 'Outbound URL embeds credentials; remove them and use a secret store.',
   'credential-query':
-    'sensitive-guard: outbound URLs carrying credential-like query parameters need confirmation',
+    'Outbound URL has a credential-like query parameter; confirm the request before sending it.',
 }
 
 function argvMatches(spec: CompiledArgv, argv: ParsedArgv): boolean {
@@ -131,6 +129,7 @@ function ruleDecision(rule: CompiledRule, evidence: PolicyEvidence): PolicyDecis
   }
   const reason = rule.reason
   if (reason !== undefined) decision.reason = reason
+  if (rule.tags.length > 0) decision.tags = [...rule.tags]
   if (evidence.paths.length > 0) decision.paths = evidence.paths
   const command = evidence.commands[0]
   if (command !== undefined) decision.command = command
@@ -195,6 +194,7 @@ export function createPolicyEngine(options: PolicyEngineOptions): PolicyEngine {
         return {
           action: config.failClosed ? 'deny' : 'ask',
           matched: false,
+          failure: true,
           reason: EVALUATION_FAILURE_REASON,
         }
       }

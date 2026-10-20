@@ -14,6 +14,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Refactored every guard-facing message into `src/messages.ts`: approval prompts
+  now name the tool and risk category, denial reasons add one safe next step,
+  `/guard` uses a labeled status block, and startup, notice, and warning lines
+  share one voice. No policy or audit behavior changed.
 - Simplified install docs to the anonymous GitHub Release tarball; removed the
   GitHub Packages token walkthrough and the outdated "private by default"
   visibility step.

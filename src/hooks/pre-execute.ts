@@ -7,12 +7,72 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-tools'
-import type { JsonValue } from '../contracts.js'
+import type { JsonValue, PolicyDecision } from '../contracts.js'
 import { inspectArguments } from '../argguard/inspect.js'
+import {
+  EVALUATION_FAILURE_REASON,
+  approvalPrompt,
+  approvalReason,
+  denyReason,
+  formatBytes,
+  type Risk,
+  type RiskKind,
+} from '../messages.js'
 import { hashJson, hashPath } from '../util/hash.js'
 import { agentKindOf, sessionIdOf, type GuardRuntime } from './runtime.js'
 
-const REDACTION_FAILED = 'sensitive-guard: policy evaluation failed; the call was blocked'
+const HIGH_RISK_TAGS = new Set([
+  'destructive',
+  'privilege',
+  'host-control',
+  'git',
+  'remote-code-execution',
+  'fork-bomb',
+])
+
+function riskWith(kind: RiskKind, detail: string | undefined): Risk {
+  return detail === undefined ? { kind } : { kind, detail }
+}
+
+/** Map internal evidence to the short risk category shown in prompts. */
+function riskFor(args: {
+  decision: PolicyDecision
+  tooLarge: boolean
+  hasSecret: boolean
+  maxArgsBytes: number
+}): Risk {
+  if (args.tooLarge) {
+    return {
+      kind: 'arguments-too-large',
+      detail: 'The serialized arguments exceed the ' + formatBytes(args.maxArgsBytes) + ' limit.',
+    }
+  }
+  if (args.hasSecret) return { kind: 'secret-in-arguments' }
+
+  const decision = args.decision
+  if (decision.failure === true) return { kind: 'evaluation-failed' }
+  if (decision.network === true) {
+    return {
+      kind: decision.ruleId === 'network:userinfo' ? 'embedded-credentials' : 'credential-query',
+    }
+  }
+
+  const tags = decision.tags ?? []
+  if (decision.ruleId?.startsWith('config-deny:') === true || tags.includes('sensitive-path')) {
+    return riskWith('sensitive-path', decision.reason)
+  }
+  if (tags.some((tag) => HIGH_RISK_TAGS.has(tag))) {
+    return riskWith('high-risk-command', decision.reason)
+  }
+  if (decision.paths !== undefined && decision.paths.length > 0) {
+    return riskWith('sensitive-path', decision.reason)
+  }
+  if (decision.command !== undefined) {
+    return riskWith('high-risk-command', decision.reason)
+  }
+  if (decision.matched) return riskWith('policy-approval', decision.reason)
+  return { kind: 'default-approval' }
+}
 
 export function registerPreExecute(ctx: Context, runtime: GuardRuntime): void {
   const { config, policy, redactor, audit } = runtime
@@ -37,7 +97,8 @@ export function registerPreExecute(ctx: Context, runtime: GuardRuntime): void {
         decision = {
           action: config.failClosed ? ('deny' as const) : ('ask' as const),
           matched: true,
-          reason: REDACTION_FAILED,
+          failure: true,
+          reason: EVALUATION_FAILURE_REASON,
         }
       }
 
@@ -58,11 +119,6 @@ export function registerPreExecute(ctx: Context, runtime: GuardRuntime): void {
         : hasSecret
           ? 'ask'
           : decision.action
-      const reason = tooLarge
-        ? 'sensitive-guard: tool arguments exceed the configured size limit'
-        : hasSecret
-          ? 'sensitive-guard: tool arguments contain a credential; remove it or ask the user'
-          : decision.reason
 
       const monitored = config.mode === 'monitor' || decision.enforce === false
       const pathHash = decision.paths?.[0] === undefined ? undefined : hashPath(decision.paths[0])
@@ -86,23 +142,24 @@ export function registerPreExecute(ctx: Context, runtime: GuardRuntime): void {
         return next()
       }
 
+      const risk = riskFor({
+        decision,
+        tooLarge,
+        hasSecret,
+        maxArgsBytes: config.limits.maxArgsBytes,
+      })
+
       if (effectiveAction === 'deny') {
         audit.decision({ ...record, action: 'blocked' })
-        return {
-          kind: 'deny',
-          reason: reason ?? 'sensitive-guard: blocked by policy',
-        }
+        return { kind: 'deny', reason: denyReason(exec.name, risk) }
       }
 
       if (effectiveAction === 'ask') {
         audit.decision({ ...record, action: 'asked' })
         return {
           kind: 'ask',
-          reason: reason ?? 'sensitive-guard: approval required',
-          displayReason: {
-            en: 'Sensitive Guard: this call may expose or transmit a credential.',
-            zh: '敏感信息守卫：此调用可能读取或外发凭据，是否继续？',
-          },
+          reason: approvalReason(exec.name, risk),
+          displayReason: approvalPrompt(exec.name, risk),
         }
       }
 

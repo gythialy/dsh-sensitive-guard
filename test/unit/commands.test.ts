@@ -58,11 +58,11 @@ describe('/guard command', () => {
     const result = await runGuardCommand(runtime, ' status ')
     expect(result.kind).toBe('success')
     const text = result.kind === 'success' ? (result.text ?? '') : ''
-    expect(text).toContain('mode=monitor')
-    expect(text).toContain('policyRules=7')
-    expect(text).toContain('redactionRules=')
-    expect(text).toContain('audit=off')
-    expect(text).toContain('restore=on')
+    expect(text).toContain('mode: monitor')
+    expect(text).toContain('rules: policy=7')
+    expect(text).toContain('redaction=')
+    expect(text).toContain('audit: off')
+    expect(text).toContain('pii restore: on')
     expect(text).not.toContain('@')
   })
 
@@ -82,7 +82,7 @@ describe('/guard command', () => {
       'restore [[PII_EMAIL_3f9a2c1d]] ' + path.join(os.tmpdir(), 'never'),
     )
     expect(result.kind).toBe('error')
-    expect(result.kind === 'error' ? result.text : '').toContain('disabled')
+    expect(result.kind === 'error' ? result.text : '').toContain('PII restore is off')
   })
 
   it('writes a restored PII value to a 0600 file without echoing it', async () => {
@@ -132,6 +132,6 @@ describe('/guard command', () => {
     const { runtime } = await makeRuntime()
     const result = await runGuardCommand(runtime, 'bogus')
     expect(result.kind).toBe('error')
-    expect(result.kind === 'error' ? result.text : '').toContain('usage')
+    expect(result.kind === 'error' ? result.text : '').toContain('Usage:')
   })
 })
