@@ -161,7 +161,7 @@ PII key file: 32 random bytes, created with mode `0600` (parent `0700`). If it i
 - `/guard status` — mode, levels, rule counts, audit state, PII/restore state; no secrets or matched values.
 - `/guard on` / `/guard off` — switch `enforce`/`monitor` for this process only; not persisted.
 - `/guard restore <placeholder> <file>` — requires `pii.restore: true`; writes the original PII to a new `0600` file, refuses to overwrite, and never echoes the value. The restore map is memory-only, so only placeholders minted in this process after enabling restore can be resolved. Secrets remain irreversible.
-- `/guard egress [status|canary]` — opt-in egress guard state: listener, whether `https_proxy` points at it, rule counts, tunnel/blocked/byte counters, recent destinations, and a loopback canary probe.
+- `/guard egress [status|canary|report]` — opt-in egress guard state: listener, whether `https_proxy` points at it, rule counts, tunnel/blocked/byte counters, recent destinations, a loopback canary probe, and `report` (aggregated destinations from the audit log, with `--since 7d` and `--yaml`).
 
 ### Egress guard (opt-in)
 
