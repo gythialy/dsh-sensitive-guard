@@ -61,6 +61,15 @@ dsh plugin --profile web add \
   https://github.com/gythialy/dsh-sensitive-guard/releases/latest/download/dsh-sensitive-guard.tgz
 ```
 
+### 交给 agent 安装
+
+把 [docs/agent-install.md](docs/agent-install.md) 交给 coding agent，或直接给它这段提示：
+
+> Install dsh-sensitive-guard into my DSH web profile by following
+> https://github.com/gythialy/dsh-sensitive-guard/blob/main/docs/agent-install.md
+
+指南包含一条安装命令、挂载验证、重启、可选的 `enforce` 配置与回滚。
+
 ### 从 npm 安装（计划中）
 
 由 [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6) 跟踪；未来 npmjs 发布使用同一个 scoped 名。

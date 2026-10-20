@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Agent-oriented install guide (`docs/agent-install.md`) with a one-command
+  tarball install, mount verification, restart guidance, optional `enforce`
+  configuration, and rollback.
+
 ### Changed
 
 - Simplified install docs to the anonymous GitHub Release tarball; removed the

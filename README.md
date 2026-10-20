@@ -62,6 +62,17 @@ dsh plugin --profile web add \
   https://github.com/gythialy/dsh-sensitive-guard/releases/latest/download/dsh-sensitive-guard.tgz
 ```
 
+### Agent-assisted install
+
+Point a coding agent at [docs/agent-install.md](docs/agent-install.md), or give
+it this prompt:
+
+> Install dsh-sensitive-guard into my DSH web profile by following
+> https://github.com/gythialy/dsh-sensitive-guard/blob/main/docs/agent-install.md
+
+The guide covers the single install command, verification, restart, optional
+`enforce` configuration, and rollback.
+
 ### From npm (planned)
 
 Tracked in [#6](https://github.com/gythialy/dsh-sensitive-guard/issues/6). The
