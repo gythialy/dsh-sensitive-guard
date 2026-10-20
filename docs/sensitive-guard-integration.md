@@ -49,7 +49,7 @@ DSH 当前没有内置的“敏感信息防泄露”能力：
 
 ### 1.3 非目标
 
-- 不做进程级 HTTP/CONNECT 代理（v1 只做 URL/命令级网络规则）。
+- v1 不做进程级 HTTP/CONNECT 代理（只做 URL/命令级网络规则）；v2 只做**目的地址级**出站守卫，不做 TLS 中间人（见 §2.4 D4b–D4e、§19）。
 - 不做图像 OCR（截图中的密钥不在 v1 范围）。
 - 不改 DSH core，不 patch 客户端输入框（Web 端粘贴拦截需要 client 插件，另立项目）。
 - 不承诺覆盖“第三方插件绕过 DSH 工具管线直接读文件”的行为。
@@ -104,6 +104,10 @@ DSH 当前没有内置的“敏感信息防泄露”能力：
 | D2 | 项目许可证 Apache-2.0 | 兼容 MIT；含专利授权；便于 vendor Apache-2.0 基线 | MIT（含 Apache 代码时义务更绕） |
 | D3 | 只 vendor 规则表/基线，核心逻辑重写 | 规则表稳定、价值高；核心 API 易漂移 | 整体 fork；只学思想不 vendor（重复劳动） |
 | D4 | v1 不做进程级 HTTP 代理 | 实现重、平台相关；先做 URL/命令级规则 | 复用 `permission-rules` 的 `network.ts` |
+| D4b | v2 提供 opt-in 的**目的地址级出站守卫**：本机 CONNECT 代理，复用 DSH 的 `http_proxy` 缝隙 | 覆盖第三方插件/MCP 子进程这类不经过 DSH 钩子的出站；不需要 CA 分发 | 自建进程级 MITM 代理（D4c 否决）；只写文档不提供执行点（无法证明生效） |
+| D4c | 不做 TLS 中间人、不生成/安装 CA | 成本在分发不在代码：必须在启动前就绪的 `NODE_EXTRA_CA_CERTS`、钥匙串管理员授权、JVM/rustls/静态 Go/容器绕过；且守卫会变成凭据持有者 | 生成并安装 CA（macOS/Linux/Windows 全平台信任库） |
+| D4d | 不在插件内 patch `fetch` / 包装全局 dispatcher | 实测 `web_fetch` 两个分支都绕过包装（未代理时自 pin `Agent`，代理时用安装时捕获的 dispatcher）；DSH disposer 会还原 dispatcher；undici 槽位非契约 | monkey-patch `globalThis.fetch`（假安全：恰漏掉模型自选目标那条路径） |
+| D4e | 不做透明/系统级拦截（pf、NetworkExtension、WFP） | 需要 root/管理员与签名扩展，原生客户端仍可绕过，超出插件边界 | 系统级透明代理（另立项目，需 OS 级隔离评估） |
 | D5 | Secrets 不可逆；PII 可选可逆（0600 文件） | 避免明文恢复表二次泄露 | 全部可逆（`dsh-mask` 模式） |
 | D6 | 默认 `monitor`，观察后再 `enforce` | 先量误报，避免阻断开发 | 默认直接 enforce |
 | D7 | `tools/post-execute` 命中即短路下游 | 阻止 spill 把原文写盘 | 先 `next()` 再脱敏（现成插件的做法） |
@@ -389,7 +393,16 @@ vendor 自 `dsh-permission-rules` 的 `rules/builtin-high-risk.yaml`（Apache-2.
 - 规则：`domains`（glob）、`ports`、`schemes`、`allow/deny/ask`。
 - URL 带 userinfo（`http://user:pass@host`）一律 `deny`。
 - 查询参数名命中 `token|key|secret|password|sig|auth` → `ask`。
-- **不做**进程级代理；v2 再评估。
+- **不做**进程级代理（v1）；v2 的决策见下。
+
+#### 6.6.1 v2 出站守卫（目的地址级，计划）
+
+- **机制**：插件在 `127.0.0.1:<egress.port>` 起一个 CONNECT 代理；用户在 `$DSH_HOME/.env`（或 shell）里设置 `HTTPS_PROXY=http://127.0.0.1:<port>`，由 DSH 启动器在**插件加载前**装成进程级 dispatcher，并下发给子进程（`@deepseek-ai/dsh-http-proxy`）。
+- **可见性**：HTTPS 只有 `host:port`（无路径/头/正文，不需要 CA）；明文 HTTP 可见完整请求；SNI 需解析 ClientHello，默认不依赖。
+- **策略**：`host[:port]` 的 allow/deny；默认 `monitor`；`enforce` 必须同时 `failClosed: true`（监听未绑定则拒绝挂载）。
+- **审计**：只记 host/port/decision/bytes，不记正文与请求头。
+- **失败语义**：代理值不可用 → DSH 报告后**直连**（fail-open）。因此守卫必须提供 doctor，证明"环境变量确实指向本进程"，否则不得宣称 enforce。
+- **已知盲区**（必须写进用户文档）：DSH 对 loopback 强制直连；telemetry 走 `node:http`、不认代理；PTC/workflow worker 按设计不下发代理；Node 22.19/22.20 子进程直连；JVM、rustls（`webpki-roots`）、静态 Go、容器不认 env；SSH/22、原始套接字、HTTP/3 不在范围内。
 
 ### 6.7 dry-run / monitor
 
@@ -799,7 +812,7 @@ dsh plugin --profile web add link:/Users/gythialy/Developer/GitHub/sensitive-gua
 1. 是否需要在 v1 提供 `/guard status|on|off|restore` 命令？
 2. PII 可逆恢复是否默认关闭？
 3. 是否把 `builtin.yaml` 直接 vendor，还是重写一份更小的基线？
-4. 是否需要在 v2 做本地 HTTP 代理（参考 permission-rules）？
+4. ~~是否需要在 v2 做本地 HTTP 代理（参考 permission-rules）？~~ **已决**：v2 做目的地址级 CONNECT 守卫，不做 TLS 中间人（D4b–D4e；预研见 §19，讨论见 issue #5）。
 5. 审计文件是否要加密或写到 `DSH_HOME` 之外？
 
 ---
@@ -839,3 +852,46 @@ dsh plugin --profile web add link:/Users/gythialy/Developer/GitHub/sensitive-gua
 | `sensitive-guard-integration/test/*.test.js` | `node --test` |
 | `sensitive-guard-integration/THIRD_PARTY_NOTICES.md` | 许可证归属 |
 | `sensitive-guard-integration/docs/sensitive-guard-integration.md` | 本文 |
+
+---
+
+## 19. v2 出站守卫：预研结论（2026-10-20）
+
+预研对象：issue #5「evaluate a process-level HTTP proxy」。方法：只读检查已安装的 DSH `0.2.1-rc.2`、在本机跑 CONNECT 代理与 dispatcher 拦截器 PoC（Node 26.12.0 / macOS），并对候选实现做复用评估。结论落在 D4b–D4e，§6.6.1 为实现约束。
+
+### 19.1 结论
+
+1. **缝隙已存在且归启动器所有。** `@deepseek-ai/dsh-http-proxy`（MIT）在任何插件加载前安装进程级 undici dispatcher，并把同一策略下发给子进程。v2 不重造它，只做它的**端点**。
+2. **插件内拦截不可用。** 包装全局 dispatcher 能截到普通 `fetch`，但 `web_fetch` 两个分支都绕过：未代理时它自 pin 一个 `Agent`，代理时用 `proxyRouteFor` 在安装时捕获的 dispatcher。DSH 的 disposer 还会在卸载时还原 dispatcher。
+3. **只做目的地址级。** CONNECT 隧道只能看到 `host:port`，这正是第三方插件/MCP 子进程缺口的控制点；正文级控制留在工具管线——那里本来就是明文。
+4. **不做 CA。** TLS 中间人的成本在分发而非代码：启动前必须就绪的 `NODE_EXTRA_CA_CERTS`、各平台信任库、JVM/rustls/静态 Go/容器绕过；而且守卫会因此持有 provider 凭据。
+
+### 19.2 可见性与覆盖
+
+| 层级 | 可见内容 | 需要 CA |
+|---|---|---|
+| CONNECT 隧道 | `host:port`（SNI 需解析 ClientHello） | 否 |
+| 明文 HTTP | 方法、URL、头、正文 | 否 |
+| TLS 终止 | 全部（含 `Authorization`） | 是，且必须在启动前就绪 |
+
+| 路径 | 现状 | 出站守卫的增量 |
+|---|---|---|
+| 1 粘贴 / 2 工具读 / 3 spill / 4 PTC / 5 system prompt | 钩子已覆盖 | 无（本就是进程内明文） |
+| 2b 子进程（`curl`/`gh`/`git`/`npx`/`pip`） | argv/URL 规则部分覆盖 | **目的地址强制**，含"脚本自己读 `.env`"的情况 |
+| 9 第三方插件 / MCP 内部 | 未覆盖 | **host 级覆盖**（MCP stdio 子进程、走 `fetch` 的 SDK） |
+| 7 assistant 复述 / 8 图像 / 10 provider 留存 | 未覆盖 | 无 |
+
+### 19.3 实现约束（来自 PoC 与 DSH 设计）
+
+- 端口必须在启动前确定（env 是启动快照），冲突必须报错，不能悄悄换端口。
+- 拒绝在调用侧呈现为 `fetch failed` / `403`，需带回可读原因（`X-Guard-Reason` 一类），由工具级规则向模型解释阻断。
+- CONNECT 阶段无法做交互式 `ask`：隧道没有会话上下文，挂起握手等于卡死（`permission-rules` 同样受此限制）。
+- 归因：env 是进程级的，"哪个子进程"需要 per-spawn 代理用户名，留作后续研究。
+- 守卫只对"配置正确且客户端遵守代理"的场景有效；恶意插件可以直接开 socket，这不是沙箱（与 §1.3 的边界一致）。
+
+### 19.4 未决问题
+
+1. `enforce` 下未知主机默认 deny-all，还是 allow-with-audit？
+2. 端口写死在 config，还是挂载时写端口文件（与启动快照冲突，倾向写死）。
+3. 审计字段是否够用（host/port/decision/bytes）？
+4. loopback 盲区只在文档声明，还是给工具级规则补一条 `127.0.0.1` 说明？

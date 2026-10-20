@@ -25,7 +25,7 @@
 | 9   | 第三方插件 / MCP 内部           | ❌ 不在 DSH 工具管线内                                                    |
 | 10  | 模型 provider 留存              | ❌ 合同/选型问题                                                          |
 
-插件只能约束经过 DSH 工具管线与消息管线的内容。
+插件只能约束经过 DSH 工具管线与消息管线的内容。v2 计划加入目的地址级出站守卫（issue [#5](https://github.com/gythialy/dsh-sensitive-guard/issues/5)）：它约束连接能去哪里，而不是内容本身，且明确不做 TLS 中间人。
 
 ## 功能
 
@@ -152,7 +152,7 @@ node bin/scan.mjs --json --no-exit-code .
 - 无法改写 DSH 的 `agent/inbox/spliced` 原文与 assistant 输出。
 - 安装前的历史会话不会自动重写。
 - 工具**参数**中的密钥只能阻止执行，无法改写参数（host 在 pre-execute 前已记录）。
-- v1 不做进程级 HTTP/CONNECT 代理、不做 OCR/图片脱敏。
+- v1 不做进程级 HTTP/CONNECT 代理。v2 计划复用 DSH 的 `HTTPS_PROXY` 缝隙做目的地址级出站守卫（只有 host 级、不装 CA），见 [issue #5](https://github.com/gythialy/dsh-sensitive-guard/issues/5) 与 [设计文档 §19](docs/sensitive-guard-integration.md)；不做 OCR/图片脱敏。
 - 脱敏隐私优先：误报可能去掉正常文本；先 `monitor` 再收敛规则。
 
 ## 开发
