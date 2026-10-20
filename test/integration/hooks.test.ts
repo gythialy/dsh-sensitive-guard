@@ -170,7 +170,7 @@ describe('hook integration', () => {
     expect(decision.messages).toHaveLength(2)
     const notice = decision.messages[1]!
     expect(notice.role).toBe('user')
-    expect(notice.source).toMatchObject({ kind: 'plugin', plugin: 'sensitive-guard' })
+    expect(notice.source).toMatchObject({ kind: 'sensitive-guard' })
     expect(notice.content[0]?.text).toContain('anthropic-key×1')
     expect(notice.content[0]?.text).not.toContain(ANTHROPIC_KEY)
   })

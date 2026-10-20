@@ -172,6 +172,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm test:coverage
+pnpm test:e2e   # 临时 headless profile + 本地 mock provider
 pnpm build
 pnpm pack:check
 ```
