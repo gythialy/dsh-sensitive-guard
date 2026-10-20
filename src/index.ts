@@ -10,6 +10,7 @@ import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@deepseek-ai/dsh-tools'
 
 import { AuditLog } from './audit.js'
+import { registerGuardCommands } from './commands/guard.js'
 import { resolveConfig, type GuardConfig } from './config.js'
 import type { Logger } from './contracts.js'
 import { registerPostExecute } from './hooks/post-execute.js'
@@ -47,10 +48,6 @@ export function apply(ctx: Context, config?: GuardConfig): void {
   if (settings.redact.notify) {
     logger.warn('sensitive-guard: redact.notify is not implemented in this version; ignoring it')
   }
-  if (settings.pii.restore) {
-    logger.warn('sensitive-guard: pii.restore is unavailable; PII placeholders are one-way')
-  }
-
   const redactor = createRedactor({
     config: settings,
     ...(settings.pii.keyFile.length > 0 ? { keyPath: settings.pii.keyFile } : {}),
@@ -71,6 +68,7 @@ export function apply(ctx: Context, config?: GuardConfig): void {
   registerPostExecute(ctx, runtime)
   registerPtcLog(ctx, runtime)
   registerSystemPrompt(ctx, runtime)
+  registerGuardCommands(ctx, runtime)
 
   logger.info(
     `sensitive-guard: active in ${settings.mode} mode ` +

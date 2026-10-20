@@ -65,6 +65,11 @@ export interface Redactor {
   redactText(text: string, level: Level): TextRedaction
   redactValue(value: JsonValue, level: Level): ValueRedaction
   redactBlocks(content: readonly BlockLike[], level: Level): ContentRedaction
+  /**
+   * Resolve a PII placeholder to its original value when the redactor was
+   * created with `pii.restore` enabled. Secrets never resolve.
+   */
+  restore(placeholder: string): string | undefined
   /** Total number of configured rules, exposed for startup diagnostics. */
   readonly ruleCount: number
 }

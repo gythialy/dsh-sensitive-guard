@@ -22,6 +22,7 @@ function fakeRedactor(needle: string): Redactor {
     redactText: noText,
     redactValue: noValue,
     redactBlocks: () => noContent,
+    restore: () => undefined,
   }
 }
 

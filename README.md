@@ -153,7 +153,13 @@ audit:
 
 Project rules live in `<project>/.dsh/rules.yaml`; see [docs/rules-format.md](docs/rules-format.md) and [docs/examples/rules.yaml](docs/examples/rules.yaml). Credential paths default to `deny` in enforce mode; `.env.example`, `.env.sample`, and `.env.template` are allowed.
 
-PII key file: 32 random bytes, created with mode `0600` (parent `0700`). If it is unavailable the guard still works with a process-only key, but placeholders stop being stable across restarts. Secrets are never reversible; `pii.restore` is reserved and currently unsupported.
+PII key file: 32 random bytes, created with mode `0600` (parent `0700`). If it is unavailable the guard still works with a process-only key, but placeholders stop being stable across restarts.
+
+### `/guard` commands
+
+- `/guard status` — mode, levels, rule counts, audit state, PII/restore state; no secrets or matched values.
+- `/guard on` / `/guard off` — switch `enforce`/`monitor` for this process only; not persisted.
+- `/guard restore <placeholder> <file>` — requires `pii.restore: true`; writes the original PII to a new `0600` file, refuses to overwrite, and never echoes the value. The restore map is memory-only, so only placeholders minted in this process after enabling restore can be resolved. Secrets remain irreversible.
 
 ## Audit
 

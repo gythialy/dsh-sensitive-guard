@@ -21,6 +21,11 @@ import { safeLogger } from '../util/logger.js'
 export interface Pseudonymizer {
   /** Return the stable `[[PII_<TYPE>_<hash8>]]` placeholder for one value. */
   id(type: string, value: string): string
+  /**
+   * Resolve a placeholder minted in this process. Only populated when
+   * `record` is enabled (the `pii.restore` opt-in); the map is memory-only.
+   */
+  get(placeholder: string): string | undefined
 }
 
 export interface PseudonymizerOptions {
@@ -29,6 +34,8 @@ export interface PseudonymizerOptions {
   /** Key file path; missing files are created with mode 0600. */
   keyPath?: string
   logger?: Logger
+  /** Keep a process-memory placeholder → original map for `/guard restore`. */
+  record?: boolean
 }
 
 const KEY_BYTES = 32
@@ -152,9 +159,15 @@ export function resolvePiiKey(options: PseudonymizerOptions = {}): Buffer {
 /** Create a synchronous keyed pseudonymizer. */
 export function createPseudonymizer(options: PseudonymizerOptions = {}): Pseudonymizer {
   const key = resolvePiiKey(options)
+  const restoreTable = options.record === true ? new Map<string, string>() : undefined
   return {
     id(type: string, value: string): string {
-      return piiPlaceholder(type, value, key)
+      const placeholder = piiPlaceholder(type, value, key)
+      restoreTable?.set(placeholder, value)
+      return placeholder
+    },
+    get(placeholder: string): string | undefined {
+      return restoreTable?.get(placeholder)
     },
   }
 }
