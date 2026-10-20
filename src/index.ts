@@ -45,9 +45,6 @@ export function apply(ctx: Context, config?: GuardConfig): void {
   const settings = resolveConfig(config)
   const logger = safeLogger(ctx.logger as unknown as Partial<Logger> | undefined)
 
-  if (settings.redact.notify) {
-    logger.warn('sensitive-guard: redact.notify is not implemented in this version; ignoring it')
-  }
   const redactor = createRedactor({
     config: settings,
     ...(settings.pii.keyFile.length > 0 ? { keyPath: settings.pii.keyFile } : {}),

@@ -36,6 +36,7 @@ The guard only constrains content that traverses DSH's tool and message pipeline
 - **Stable placeholders**: secrets use `[SECRET:<category>:<id>]` (one-way); PII uses keyed `[[PII_<TYPE>_<hash8>]]` (stable across sessions).
 - **Audit**: JSONL with rule ids, counts, and hashes only — never plaintext, secrets, or full paths.
 - **Observe first**: `mode: monitor` audits without blocking.
+- **Optional notice**: `redact.notify` appends one count-only message when a step is redacted.
 
 ## Roadmap
 
@@ -123,7 +124,7 @@ redact:
   toolResults: true
   systemPrompt: true
   ptcLog: true
-  notify: false # planned: issue #2
+  notify: false # count-only notice after a redacted step
 levels:
   input: aggressive # user/context messages
   output: balanced # tool results and system prompt
