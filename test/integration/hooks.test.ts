@@ -24,6 +24,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  vi.unstubAllEnvs()
   // Audit/spill writers can settle a file between rmdir and unlink; retry the
   // directory removal instead of turning a teardown race into a CI failure.
   await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
@@ -39,8 +40,11 @@ function config(overrides: Partial<GuardConfig> = {}): GuardConfig {
   })
 }
 
-function start(overrides: Partial<GuardConfig> = {}): FakeContext {
-  const fake = createFakeContext()
+function start(
+  overrides: Partial<GuardConfig> = {},
+  services: Record<string, unknown> = {},
+): FakeContext {
+  const fake = createFakeContext(services)
   apply(fake.ctx, config(overrides))
   return fake
 }
@@ -212,10 +216,55 @@ describe('hook integration', () => {
       'Sensitive Guard needs approval for the bash call: high-risk command.',
     )
     expect(decision.reason).toContain('Force-pushing rewrites remote history')
-    expect(decision.displayReason?.en).toContain('Risk: high-risk command')
+    expect(decision.displayReason?.en).toContain('Type: high-risk command')
+    expect(decision.displayReason?.en).toContain('Action: git push --force origin main')
     expect(decision.displayReason?.en).toContain('Approve once only if you expect this exact call')
-    expect(decision.displayReason?.zh).toContain('风险：高风险命令')
+    expect(decision.displayReason?.zh).toContain('类型：高风险命令')
+    expect(decision.displayReason?.zh).toContain('操作：git push --force origin main')
     expect(next).not.toHaveBeenCalled()
+  })
+
+  it('uses Chinese for approval and notices when DSH is Chinese', async () => {
+    const fake = start(
+      {
+        redact: {
+          userMessages: true,
+          toolResults: true,
+          systemPrompt: true,
+          ptcLog: true,
+          notify: true,
+        },
+      },
+      { settings: { describe: () => [{ ns: 'locale', value: { preference: 'zh-CN' } }] } },
+    )
+
+    const preExecute = fake.listener('tools/pre-execute')
+    const approval = (await preExecute(
+      makeExec('bash', { command: 'git push --force origin main' }),
+      vi.fn(async () => ({ kind: 'allow' })),
+    )) as { reason?: string; displayReason?: { en: string; zh: string } }
+    expect(approval.reason).toContain('敏感信息守卫需要确认 bash 调用')
+    expect(approval.reason).toContain('高风险命令')
+    expect(approval.displayReason?.en).toContain('Tool: bash')
+    expect(approval.displayReason?.zh).toContain('类型：高风险命令')
+
+    const preStep = fake.listener('agent/pre-step')
+    const messages = [
+      {
+        id: 'm1',
+        role: 'user',
+        source: { kind: 'user' },
+        content: [{ type: 'text', text: 'key=' + ANTHROPIC_KEY }],
+      },
+    ]
+    const stepped = (await preStep(
+      { agent: makeAgent(dir), messages, turn: 1, step: 1, signal: new AbortController().signal },
+      vi.fn(async () => ({ kind: 'enter', messages })),
+    )) as { messages: Array<{ content: Array<{ text?: string }> }> }
+    const notice = stepped.messages[1]?.content[0]?.text ?? ''
+    expect(notice).toContain('敏感信息守卫已脱敏')
+    expect(notice).toContain('anthropic-key×1')
+    expect(notice).not.toContain(ANTHROPIC_KEY)
   })
 
   it('asks when tool arguments contain a credential', async () => {
@@ -230,7 +279,9 @@ describe('hook integration', () => {
 
     expect(decision.kind).toBe('ask')
     expect(decision.reason).toContain('credential in arguments')
-    expect(decision.displayReason?.en).toContain('Risk: credential in arguments')
+    expect(decision.displayReason?.en).toContain('Type: credential in arguments')
+    expect(decision.displayReason?.en).toContain('Action: ')
+    expect(decision.displayReason?.en).toContain('notes.txt')
     expect(JSON.stringify(decision)).not.toContain(ANTHROPIC_KEY)
   })
 
@@ -246,9 +297,9 @@ describe('hook integration', () => {
 
     expect(decision.kind).toBe('ask')
     expect(decision.reason).toContain('credential-like URL query')
-    expect(decision.displayReason?.en).toContain('Risk: credential-like URL query')
+    expect(decision.displayReason?.en).toContain('Type: credential-like URL query')
+    expect(decision.displayReason?.en).toContain('Action: fetch https://example.test/x?token=***')
     expect(JSON.stringify(decision)).not.toContain('s3cret')
-    expect(JSON.stringify(decision)).not.toContain('example.test')
   })
 
   it('allows .env.example and normal calls', async () => {

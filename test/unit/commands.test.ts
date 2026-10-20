@@ -38,7 +38,7 @@ async function makeRuntime(restore = true): Promise<{ runtime: GuardRuntime; dir
   } as unknown as AuditLog
   return {
     dir,
-    runtime: { config, redactor, policy, audit, logger: noopLogger },
+    runtime: { config, redactor, policy, audit, logger: noopLogger, locale: () => 'en' },
   }
 }
 
@@ -64,6 +64,21 @@ describe('/guard command', () => {
     expect(text).toContain('audit: off')
     expect(text).toContain('pii restore: on')
     expect(text).not.toContain('@')
+  })
+
+  it('renders status and mode text in Chinese when DSH is Chinese', async () => {
+    const { runtime } = await makeRuntime()
+    runtime.locale = () => 'zh'
+
+    const status = await runGuardCommand(runtime, 'status')
+    const text = status.kind === 'success' ? (status.text ?? '') : ''
+    expect(text).toContain('敏感信息守卫')
+    expect(text).toContain('模式: monitor')
+    expect(text).toContain('规则: 策略=7')
+    expect(text).toContain('PII 恢复: 开')
+
+    const mode = await runGuardCommand(runtime, 'on')
+    expect(mode.kind === 'success' ? mode.text : '').toContain('仅当前进程')
   })
 
   it('toggles the runtime mode without persisting it', async () => {

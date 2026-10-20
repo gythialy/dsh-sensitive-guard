@@ -11,13 +11,13 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { CommandResult } from '@deepseek-ai/dsh-commands'
 import type { GuardRuntime } from '../hooks/runtime.js'
 import {
-  RESTORE_DISABLED_TEXT,
-  RESTORE_INVALID_TEXT,
-  RESTORE_MISSING_TEXT,
-  RESTORE_UNKNOWN_TEXT,
   modeText,
+  restoreDisabledText,
   restoreExistsText,
+  restoreInvalidText,
+  restoreMissingText,
   restoreSuccessText,
+  restoreUnknownText,
   restoreWriteFailedText,
   statusText,
   unknownCommandText,
@@ -40,18 +40,21 @@ function status(runtime: GuardRuntime): CommandResult {
   const config = runtime.config
   return {
     kind: 'success',
-    text: statusText({
-      mode: config.mode,
-      failClosed: config.failClosed,
-      inputLevel: config.levels.input,
-      outputLevel: config.levels.output,
-      policyRules: runtime.policy.ruleCount,
-      redactionRules: runtime.redactor.ruleCount,
-      auditEnabled: config.audit.enabled,
-      auditPath: config.audit.path,
-      piiEnabled: config.pii.enabled,
-      piiRestore: config.pii.restore,
-    }),
+    text: statusText(
+      {
+        mode: config.mode,
+        failClosed: config.failClosed,
+        inputLevel: config.levels.input,
+        outputLevel: config.levels.output,
+        policyRules: runtime.policy.ruleCount,
+        redactionRules: runtime.redactor.ruleCount,
+        auditEnabled: config.audit.enabled,
+        auditPath: config.audit.path,
+        piiEnabled: config.pii.enabled,
+        piiRestore: config.pii.restore,
+      },
+      runtime.locale(),
+    ),
   }
 }
 
@@ -64,7 +67,7 @@ function setMode(runtime: GuardRuntime, enabled: boolean): CommandResult {
     mode,
     action: 'allowed',
   })
-  return { kind: 'success', text: modeText(mode) }
+  return { kind: 'success', text: modeText(mode, runtime.locale()) }
 }
 
 /**
@@ -83,22 +86,25 @@ export async function runGuardCommand(
   if (verb === 'on') return setMode(runtime, true)
   if (verb === 'off') return setMode(runtime, false)
 
-  if (verb !== 'restore') return { kind: 'error', text: unknownCommandText(verb) }
+  if (verb !== 'restore') {
+    return { kind: 'error', text: unknownCommandText(verb, runtime.locale()) }
+  }
 
   const config = runtime.config
-  if (!config.pii.restore) return { kind: 'error', text: RESTORE_DISABLED_TEXT }
+  const locale = runtime.locale()
+  if (!config.pii.restore) return { kind: 'error', text: restoreDisabledText(locale) }
 
   const placeholder = tokens[1]
   const target = tokens[2]
   if (placeholder === undefined || target === undefined) {
-    return { kind: 'error', text: RESTORE_MISSING_TEXT }
+    return { kind: 'error', text: restoreMissingText(locale) }
   }
   if (!PII_PLACEHOLDER.test(placeholder)) {
-    return { kind: 'error', text: RESTORE_INVALID_TEXT }
+    return { kind: 'error', text: restoreInvalidText(locale) }
   }
 
   const value = runtime.redactor.restore(placeholder)
-  if (value === undefined) return { kind: 'error', text: RESTORE_UNKNOWN_TEXT }
+  if (value === undefined) return { kind: 'error', text: restoreUnknownText(locale) }
 
   try {
     const file = await writeRestoreFile(target, value)
@@ -109,12 +115,15 @@ export async function runGuardCommand(
       action: 'allowed',
       rule: 'pii-restore',
     })
-    return { kind: 'success', text: restoreSuccessText(placeholder, file) }
+    return { kind: 'success', text: restoreSuccessText(placeholder, file, locale) }
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code
     return {
       kind: 'error',
-      text: code === 'EEXIST' ? restoreExistsText(target) : restoreWriteFailedText(target),
+      text:
+        code === 'EEXIST'
+          ? restoreExistsText(target, locale)
+          : restoreWriteFailedText(target, locale),
     }
   }
 }

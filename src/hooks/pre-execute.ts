@@ -8,6 +8,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-tools'
 import type { JsonValue, PolicyDecision } from '../contracts.js'
+import { summarizeAction } from '../action-summary.js'
 import { inspectArguments } from '../argguard/inspect.js'
 import {
   EVALUATION_FAILURE_REASON,
@@ -75,7 +76,7 @@ function riskFor(args: {
 }
 
 export function registerPreExecute(ctx: Context, runtime: GuardRuntime): void {
-  const { config, policy, redactor, audit } = runtime
+  const { config, policy, redactor, audit, locale } = runtime
 
   ctx.on(
     'tools/pre-execute',
@@ -142,24 +143,26 @@ export function registerPreExecute(ctx: Context, runtime: GuardRuntime): void {
         return next()
       }
 
+      const activeLocale = locale()
       const risk = riskFor({
         decision,
         tooLarge,
         hasSecret,
         maxArgsBytes: config.limits.maxArgsBytes,
       })
+      const action = tooLarge ? undefined : summarizeAction(exec.name, exec.arguments, redactor)
 
       if (effectiveAction === 'deny') {
         audit.decision({ ...record, action: 'blocked' })
-        return { kind: 'deny', reason: denyReason(exec.name, risk) }
+        return { kind: 'deny', reason: denyReason(exec.name, risk, activeLocale) }
       }
 
       if (effectiveAction === 'ask') {
         audit.decision({ ...record, action: 'asked' })
         return {
           kind: 'ask',
-          reason: approvalReason(exec.name, risk),
-          displayReason: approvalPrompt(exec.name, risk),
+          reason: approvalReason(exec.name, risk, activeLocale),
+          displayReason: approvalPrompt(exec.name, risk, action),
         }
       }
 

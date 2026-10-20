@@ -53,7 +53,7 @@ export function registerPreStep(ctx: Context, runtime: GuardRuntime): void {
       let nextMessages = messages
       if (config.redact.notify) {
         const hits = [...totals].map(([category, count]) => ({ category, count }))
-        const text = noticeText(hits)
+        const text = noticeText(hits, runtime.locale())
         nextMessages = [
           ...messages,
           createUserMessage({

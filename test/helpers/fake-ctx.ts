@@ -20,7 +20,7 @@ export interface FakeContext {
 }
 
 /** Minimal Cordis context: records listeners, commands, and prepend semantics. */
-export function createFakeContext(): FakeContext {
+export function createFakeContext(services: Record<string, unknown> = {}): FakeContext {
   const listeners = new Map<string, Listener[]>()
   const warnings: string[] = []
   const commands: RegisteredCommand[] = []
@@ -43,6 +43,9 @@ export function createFakeContext(): FakeContext {
 
   const ctx = {
     logger,
+    get(name: string) {
+      return services[name]
+    },
     inject(_services: string[], callback: (scope: unknown) => void) {
       callback(commandCtx)
       return () => undefined
