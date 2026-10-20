@@ -906,4 +906,25 @@ dsh plugin --profile web add link:/Users/gythialy/Developer/GitHub/sensitive-gua
 - **测试**：规则单测；真实 listener 的 CONNECT/明文 HTTP（allow、deny、monitor、unknown-deny、缺端口 authority、端口占用、upstream 串联与 502）；canary 的 ok/denied/refused/timeout；`apply()` 全链路（审计落盘 + 命令输出 + dispose 关监听 + fail-closed 拒载）；真实子进程 `curl -x` 的放行与 403；审计报告（窗口、轮转、坏行、YAML 建议）。
 - **e2e**：`test/e2e/egress.mjs` 用临时 `DSH_HOME` 启动 headless profile，把 `http(s)_proxy` 指向守卫，让 mock provider 触发 `bash` 工具，验证主机派生子进程的请求确实经过守卫并写入 `phase: "egress"` 审计；deny 场景验证 `enforced: true` 且目标服务器零请求。监听器 `unref()`，headless 一次性运行结束即可退出。
 - **实测**：macOS / Node 26.12.0。拒绝 CONNECT 时 curl 退出码 7，stderr 为 `CONNECT tunnel failed, response 403`；放行路径正常转发。
-- **未做**：TLS 中间人（D4c 维持否决）、per-child 归因（env 是进程级，仍作后续研究）、系统级透明拦截（D4e）。
+- **未做**：TLS 中间人（D4c 维持否决，门槛见 §19.7）、per-child 归因（env 是进程级，结论见 §19.6）、系统级透明拦截（D4e）。
+
+### 19.6 归因研究：per-spawn 代理身份（issue #20）
+
+**结论：当前插件缝隙无法实现 per-child 归因**。守卫能回答"某个客户端访问了哪个目标"，不能回答"是哪个子进程/工具/会话"。改变这一点需要宿主支持，不是插件改动。
+
+只读检查已安装 DSH `0.2.1-rc.2` 得到的证据：
+
+| 缝隙 | 事实 | 结论 |
+|---|---|---|
+| `tools/pre-execute` | `dsh-tools` README 明确 **deliberately cannot rewrite `exec.arguments`**；该事件只做 allow/deny/ask，`ctx.tools.guard()` 是单调 deny | 插件既改不了命令，也够不到 spawn env |
+| `@deepseek-ai/dsh-subprocess` | `scrubbedParentEnv()` 去掉凭据形状的变量与 `DSH_*`，再用 `proxyEnvironmentForChild()` 合并代理值 | 每个子进程拿到**同一套**代理值 |
+| `@deepseek-ai/dsh-mcp-client` | stdio 子进程的 `env` 是 profile 里的静态配置，合并覆盖 scrubbed parent env | 只能按"服务器条目"区分配置，不是运行时归因 |
+| PTC / workflow worker | 设计上不下发代理 | 本来就不在守卫覆盖范围内 |
+
+候选路径，按代价从低到高：
+
+1. **宿主提供 child 标识**：`SubprocessRuntime` / `proxyEnvironmentForChild()` 接受一个 child id，把代理写成 `http://<id>:<token>@127.0.0.1:<port>`；守卫按 userinfo 拆分身份，审计补 `client` 字段。需要上游 DSH 变更。
+2. **per-child 端口池**：守卫监听多个端口，宿主按 child 分配。同样要宿主支持，并与"端口写死在启动快照里"的约束冲突（D4b）。
+3. **工具级包装**：给每个工具注入不同 env —— 只有工具自己声明 env 才行，`pre-execute` 改不了，不可行。
+
+**建议**：向 DSH 提交 feature request（附本节）；插件侧先把审计字段留成可扩展（`phase: "egress"` 已有 host/port/decision/rule/bytes，加 `client` 向后兼容），等宿主给出 child 标识再补。在此之前，文档继续声明"审计无归因"。
