@@ -124,6 +124,13 @@ remaining hooks.
 `output` applies to tool results and system prompt (default `balanced`).
 PII rules are also gated by `pii.enabled`.
 
+The tier-2 `high-entropy` fallback skips two identifier shapes so that pasted
+links and commit references survive: bare hexadecimal runs of exactly 32, 40,
+or 64 characters (git SHA-1, MD5, SHA-256, CMS/file row ids), and any match
+fully inside the path of an absolute `http(s)` URL. Query strings, fragments,
+URL userinfo, and every other rule keep their behaviour — a signed-URL
+signature or an OAuth token in the query is still redacted.
+
 ### `policy`
 
 - `rulesFile`: project rule file, resolved from the session working directory.

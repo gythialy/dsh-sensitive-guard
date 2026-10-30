@@ -18,6 +18,7 @@ import type {
 import type { Pseudonymizer } from '../pseudonym/index.js'
 import { secretPlaceholder, secretPlaceholderId } from './placeholders.js'
 import { SECRET_RULES, maxTier, type CompiledSecretRule } from './rules.js'
+import { containedInRanges, findUrlPathRanges, type TextRange } from './urls.js'
 
 export interface EngineOptions {
   maxScanBytes: number
@@ -77,6 +78,15 @@ function overlapsPlaceholder(
   return false
 }
 
+/**
+ * URL path ranges for rules that exempt URL path segments, empty otherwise.
+ * The range scan is skipped entirely for every other rule (and for text
+ * without `://`), so ordinary windows pay nothing.
+ */
+function urlPathsFor(rule: CompiledSecretRule, text: string): readonly TextRange[] {
+  return rule.exemptInUrlPath === true ? findUrlPathRanges(text) : []
+}
+
 function addHit(
   accumulator: HitAccumulator,
   category: string,
@@ -112,6 +122,7 @@ function replaceRule(
   pseudonymizer: Pseudonymizer | undefined,
 ): RuleReplacement {
   const ranges = findPlaceholderRanges(text)
+  const urlPaths = urlPathsFor(rule, text)
   const regex = rule.pattern
   const ids: string[] = []
   const seenIds = new Set<string>()
@@ -132,6 +143,7 @@ function replaceRule(
       const end = start + value.length
       if (rule.validate !== undefined && !rule.validate(value)) continue
       if (ranges.length > 0 && overlapsPlaceholder(ranges, start, end)) continue
+      if (urlPaths.length > 0 && containedInRanges(urlPaths, start, end)) continue
       let placeholder: string
       if (rule.pii === true) {
         // The active-rule filter guarantees a pseudonymizer for PII rules.
@@ -163,6 +175,7 @@ function scanWindow(window: string, rules: readonly CompiledSecretRule[]): boole
   const ranges = findPlaceholderRanges(window)
   for (const rule of rules) {
     const regex = rule.pattern
+    const urlPaths = urlPathsFor(rule, window)
     regex.lastIndex = 0
     try {
       let match: RegExpExecArray | null
@@ -176,6 +189,7 @@ function scanWindow(window: string, rules: readonly CompiledSecretRule[]): boole
         const end = start + value.length
         if (rule.validate !== undefined && !rule.validate(value)) continue
         if (ranges.length > 0 && overlapsPlaceholder(ranges, start, end)) continue
+        if (urlPaths.length > 0 && containedInRanges(urlPaths, start, end)) continue
         return true
       }
     } finally {

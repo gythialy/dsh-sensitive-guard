@@ -50,6 +50,23 @@ export const SAMPLE = {
   ),
   /** A mixed-class 24-char token that the entropy fallback accepts. */
   highEntropy: 'Q7mZ2vK9pR4tW1yB6nL3cD5f',
+  /**
+   * Synthetic CMS-style URL whose path carries a 32-hex row id. The host and
+   * the id are synthetic: the id is a document identifier, not a credential.
+   */
+  urlWithHexPathId: j(
+    'https://example.com/freecms/site/demo/ggxx/info/2026/',
+    '0123456789abcdef0123456789abcdef',
+    '.html',
+  ),
+  /** Bare hexadecimal digests and identifiers the entropy fallback must leave alone. */
+  hexId32: '0123456789abcdef0123456789abcdef',
+  hexSha1: '0123456789abcdef0123456789abcdef01234567',
+  hexSha256: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+  /** One character short of a digest length: still a high-entropy candidate. */
+  hexId31: '0123456789abcdef0123456789abcde',
+  /** One character past a digest length: still a high-entropy candidate. */
+  hexId33: '0123456789abcdef0123456789abcdef0',
   /** Lowercase prose long enough to interest the entropy fallback, but single-class. */
   prose: 'implementationconfigurationdocumentationnotes',
   /** Glued common English words: mixed case but semantically prose. */

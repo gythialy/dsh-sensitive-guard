@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The tier-2 `high-entropy` fallback no longer redacts identifier-shaped text:
+  bare 32/40/64-character hexadecimal runs (git SHA-1, MD5, SHA-256, CMS/file
+  row ids) and matches fully inside the path of an absolute `http(s)` URL. A
+  pasted announcement link such as
+  `https://example.com/freecms/site/demo/2026/<32-hex>.html` stays readable
+  while query strings, fragments, userinfo, and every other rule keep their
+  coverage.
+
 ## [0.2.0] - 2026-10-20
 
 ### Added

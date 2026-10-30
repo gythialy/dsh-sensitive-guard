@@ -114,6 +114,15 @@ const FAKE_KEY_MARKERS = ['example', 'test', 'xxxx', 'your', 'placeholder', 'red
 const COMMON_WORDS = ['the', 'and', 'for', 'that', 'with', 'this', 'from']
 
 /**
+ * Bare hexadecimal digests and identifiers: git SHA-1 (40), MD5 (32), SHA-256
+ * (64), and the 32-hex row/file ids CMS exports use. They carry no provider
+ * prefix, are public identifiers rather than credentials, and the entropy
+ * fallback is the only rule that would claim them — the documented git-SHA
+ * false positive. Case-insensitive: digests appear in both cases.
+ */
+const PURE_HEX_ID = /^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/
+
+/**
  * Post-filter for the `high-entropy` fallback; each rejection reason is
  * marked inline. Every check runs on the match alone, so a public-key PEM
  * body line (shareable by design) can still be redacted — the fallback is
@@ -123,6 +132,8 @@ export function isHighEntropyToken(match: string): boolean {
   const lower = match.toLowerCase()
   // Documentation/example placeholders ('your_api_key_here' style).
   if (FAKE_KEY_MARKERS.some((marker) => lower.includes(marker))) return false
+  // Bare hex digests and CMS/file row ids are identifiers, not credentials.
+  if (PURE_HEX_ID.test(match)) return false
   // Character-class diversity: a real token mixes at least two of
   // lowercase / uppercase / digit / symbol; single-class runs are not secrets.
   const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((pattern) =>
