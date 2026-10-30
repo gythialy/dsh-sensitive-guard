@@ -60,6 +60,10 @@ Published to npmjs from v0.2.0 (anonymous, no token):
 dsh plugin --profile web add @r0cky20/dsh-sensitive-guard
 ```
 
+The text the plugin shows in DSH's market and plugin manager — and the catalog
+entry it submits for the Discover list — is documented in
+[docs/market-listing.md](docs/market-listing.md).
+
 ### From GitHub Release
 
 For a pinned or checksum-verified artifact: verify the download against the

@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `docs/market-listing.md`: which file owns each display string the DSH market
+  and plugin manager show for this plugin (`locale/<lang>.json` →
+  `package.json` → the catalog entry), plus the ready-to-submit
+  `data/plugins/gythialy__dsh-sensitive-guard.yml` catalog entry with its
+  English and Chinese one-liners.
+
 ### Fixed
 
 - The tier-2 `high-entropy` fallback no longer redacts identifier-shaped text:
