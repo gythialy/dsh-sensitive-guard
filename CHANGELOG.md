@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-30
+
 ### Added
 
 - `docs/market-listing.md`: which file owns each display string the DSH market
