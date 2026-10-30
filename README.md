@@ -8,7 +8,7 @@
 
 A host-only security plugin for [DeepSeek Harness](https://github.com/deepseek-ai/dsh): it **blocks credential reads and outbound secrets**, and **redacts secrets, tokens, and PII** before they reach the model, the session log, or a spill file.
 
-> Status: **0.2.0**. The interception, redaction, and opt-in egress layers are implemented and tested. Remaining work is tracked in GitHub Issues (see [Roadmap](#roadmap)); do not describe planned capabilities as available.
+> Status: **0.2.1**. The interception, redaction, and opt-in egress layers are implemented and tested. Remaining work is tracked in GitHub Issues (see [Roadmap](#roadmap)); do not describe planned capabilities as available.
 
 ## What it covers
 
