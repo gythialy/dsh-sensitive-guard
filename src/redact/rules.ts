@@ -51,6 +51,12 @@ export interface CompiledSecretRule {
   readonly validate?: RuleValidator
   /** PII rules emit keyed `[[PII_...]]` pseudonyms instead of secret placeholders. */
   readonly pii?: boolean
+  /**
+   * Skip matches fully inside the path of an absolute `http(s)` URL: those
+   * segments are document identifiers, not credentials. Query strings,
+   * fragments, and every rule without this flag keep their normal behaviour.
+   */
+  readonly exemptInUrlPath?: boolean
 }
 
 /** Categories that use keyed PII pseudonyms instead of random secret ids. */
@@ -251,8 +257,14 @@ export const SECRET_RULES: readonly CompiledSecretRule[] = Object.freeze([
   {
     category: 'high-entropy',
     tier: 2,
+    // Last resort for prefix-less tokens. Two identifier shapes are excluded
+    // before this rule claims them: bare hexadecimal digests of 32/40/64
+    // characters (git SHA-1, MD5, SHA-256, CMS/file ids) inside the validator,
+    // and any match fully inside the path of an absolute `http(s)` URL. Query
+    // strings, fragments, and every other tier keep their coverage.
     pattern: /\b[A-Za-z0-9+=]{20,}\b/g,
     validate: isHighEntropyToken,
+    exemptInUrlPath: true,
   },
 ])
 

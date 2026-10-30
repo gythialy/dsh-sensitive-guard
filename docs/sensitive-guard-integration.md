@@ -807,7 +807,7 @@ dsh plugin --profile web add link:/Users/gythialy/Developer/GitHub/sensitive-gua
 | spill 短路导致超大结果未截断 | 中 | 记录审计；对含密钥结果优先安全 |
 | 上游 API 变更 | 中 | 只用稳定事件；集成测试锁定签名 |
 | `realpath` 性能 | 低 | 仅对路径参数调用；缓存 |
-| 高熵规则误报 git SHA | 中 | 默认 `balanced`，高熵仅 `aggressive` |
+| 高熵规则误报 git SHA / URL 路径里的 id | 中 | 默认 `balanced`，高熵仅 `aggressive`；纯 hex 32/40/64 与 http(s) URL path 内已豁免（0.2.1） |
 | 历史会话含密钥 | 高 | 独立清理流程，不在本插件自动改日志 |
 | 第三方插件绕过 | 中 | 文档声明边界；必要时用 OS 级隔离 |
 

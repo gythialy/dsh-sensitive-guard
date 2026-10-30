@@ -266,6 +266,27 @@ describe('tier 2 high-entropy fallback', () => {
     expect(redact('minimal', SAMPLE.highEntropy).changed).toBe(false)
     expect(redact('balanced', SAMPLE.highEntropy).changed).toBe(false)
   })
+
+  it('leaves bare 32/40/64-character hex digests alone', () => {
+    for (const digest of [SAMPLE.hexId32, SAMPLE.hexSha1, SAMPLE.hexSha256]) {
+      const result = redact('aggressive', `commit ${digest} pushed`)
+      expect(result.changed).toBe(false)
+      expect(result.text).toBe(`commit ${digest} pushed`)
+      expect(result.hits).toEqual([])
+    }
+    // Case-insensitive: digests appear uppercase too.
+    const upper = SAMPLE.hexId32.toUpperCase()
+    expect(redact('aggressive', upper).changed).toBe(false)
+    expect(isHighEntropyToken(SAMPLE.hexSha1)).toBe(false)
+  })
+
+  it('still redacts hex runs just outside the digest lengths', () => {
+    for (const candidate of [SAMPLE.hexId31, SAMPLE.hexId33]) {
+      const result = redact('aggressive', candidate)
+      expect(result.changed).toBe(true)
+      expect(result.text).toContain('[SECRET:high-entropy:')
+    }
+  })
 })
 
 describe('benign text', () => {
